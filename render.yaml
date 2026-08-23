@@ -1,0 +1,13 @@
+services:
+  # Mini D-Mart Spring Boot Backend API
+  - type: web
+    name: mini-dmart-backend
+    env: java
+    buildCommand: mvn clean package -DskipTests
+    startCommand: java -jar backend/target/mini-dmart-backend-1.0.0.jar
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8082
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"
