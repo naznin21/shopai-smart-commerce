@@ -17,7 +17,7 @@ export const orderService = {
   },
 
   async getMyOrders(): Promise<Order[]> {
-    const res = await api.get<Order[]>('/orders/my');
+    const res = await api.get<Order[]>('/orders');
     return res.data;
   },
 

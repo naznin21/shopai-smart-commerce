@@ -46,7 +46,10 @@ export const CheckoutPage: React.FC = () => {
           const firstAvail = slots.find((s) => s.isAvailable ?? s.available ?? (s.bookedCount < s.maxCapacity));
           if (firstAvail) setSelectedSlot(firstAvail.timeSlot);
         })
-        .catch((err) => console.error('Error fetching slots', err))
+        .catch((err) => {
+          console.error('Error fetching slots', err);
+          showToast('Could not load pickup slots. Please check your connection and try again.', 'error');
+        })
         .finally(() => setSlotsLoading(false));
     }
   }, [orderType, selectedDate]);

@@ -11,6 +11,7 @@ import com.minidmart.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class PickupSlotService {
 
     private final PickupSlotRepository pickupSlotRepository;
     private final AuditLogService auditLogService;
+    private final PickupSlotInitializer pickupSlotInitializer;
 
     @Value("${app.pickup.default-slot-capacity:10}")
     private int defaultCapacity;
@@ -50,8 +52,23 @@ public class PickupSlotService {
 
         List<PickupSlot> slots = pickupSlotRepository.findBySlotDateOrderByTimeSlotAsc(date);
         if (slots.isEmpty()) {
-            // Auto-initialize standard slots for this date
-            slots = initializeDefaultSlotsForDate(date);
+            // Auto-initialize standard slots for this date. Each slot is created in
+            // its own transaction (see PickupSlotInitializer), so a concurrent
+            // request racing to create the same date's slots (e.g. React
+            // StrictMode double-firing the checkout page's effect) can never
+            // surface as a 500 here — we just re-read afterwards.
+            for (String timeSlot : DEFAULT_TIME_SLOTS) {
+                try {
+                    pickupSlotInitializer.createSlotIfAbsent(date, timeSlot, defaultCapacity);
+                } catch (DataIntegrityViolationException e) {
+                    // Lost the race for this one slot to a concurrent request — the
+                    // row exists either way, so this isn't an error. Our own
+                    // transaction here is unaffected since the insert ran in a
+                    // separate (REQUIRES_NEW) transaction that rolled back cleanly.
+                    log.debug("Slot {} on {} was already created by a concurrent request", timeSlot, date);
+                }
+            }
+            slots = pickupSlotRepository.findBySlotDateOrderByTimeSlotAsc(date);
         }
 
         return slots.stream()
@@ -164,7 +181,6 @@ public class PickupSlotService {
                 .maxCapacity(slot.getMaxCapacity())
                 .bookedCount(slot.getBookedCount())
                 .availableSlots(available)
-                .isAvailable(isAvail)
                 .available(isAvail)
                 .statusText(statusText)
                 .build();

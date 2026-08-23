@@ -33,6 +33,11 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getCustomerOrders());
     }
 
+    @GetMapping("/my")
+    public ResponseEntity<List<OrderDto>> getMyOrdersAlt() {
+        return ResponseEntity.ok(orderService.getCustomerOrders());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.getOrderById(id));
