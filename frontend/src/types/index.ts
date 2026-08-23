@@ -151,12 +151,15 @@ export interface Order {
 }
 
 export interface PickupSlot {
+  id?: number;
   slotDate: string;
   timeSlot: string;
   maxCapacity: number;
   bookedCount: number;
-  availableCapacity: number;
-  isAvailable: boolean;
+  availableSlots?: number;
+  availableCapacity?: number;
+  isAvailable?: boolean;
+  available?: boolean;
   statusText: string;
 }
 

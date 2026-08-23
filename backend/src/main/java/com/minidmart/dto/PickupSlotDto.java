@@ -1,5 +1,6 @@
 package com.minidmart.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,9 @@ public class PickupSlotDto {
     private Integer maxCapacity;
     private Integer bookedCount;
     private Integer availableSlots;
+    @JsonProperty("isAvailable")
     private boolean isAvailable;
+    @JsonProperty("available")
+    private boolean available;
     private String statusText; // e.g., "7 / 10 slots available" or "Fully booked"
 }

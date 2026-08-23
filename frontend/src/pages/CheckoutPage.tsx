@@ -43,7 +43,7 @@ export const CheckoutPage: React.FC = () => {
         .getSlotsForDate(selectedDate)
         .then((slots) => {
           setAvailableSlots(slots);
-          const firstAvail = slots.find((s) => s.isAvailable);
+          const firstAvail = slots.find((s) => s.isAvailable ?? s.available ?? (s.bookedCount < s.maxCapacity));
           if (firstAvail) setSelectedSlot(firstAvail.timeSlot);
         })
         .catch((err) => console.error('Error fetching slots', err))
@@ -239,7 +239,8 @@ export const CheckoutPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {availableSlots.map((slot) => {
                         const isSelected = selectedSlot === slot.timeSlot;
-                        const isFull = !slot.isAvailable;
+                        const isSlotAvailable = slot.isAvailable ?? slot.available ?? (slot.bookedCount < slot.maxCapacity);
+                        const isFull = !isSlotAvailable;
 
                         return (
                           <button

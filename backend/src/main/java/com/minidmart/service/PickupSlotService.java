@@ -165,6 +165,7 @@ public class PickupSlotService {
                 .bookedCount(slot.getBookedCount())
                 .availableSlots(available)
                 .isAvailable(isAvail)
+                .available(isAvail)
                 .statusText(statusText)
                 .build();
     }
