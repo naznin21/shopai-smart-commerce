@@ -28,6 +28,12 @@ public class PickupSlotController {
         return ResponseEntity.ok(pickupSlotService.getSlotsForDate(date));
     }
 
+    @GetMapping("/date/{date}")
+    public ResponseEntity<List<PickupSlotDto>> getSlotsByDatePath(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(pickupSlotService.getSlotsForDate(date));
+    }
+
     @GetMapping("/upcoming")
     public ResponseEntity<List<PickupSlotDto>> getUpcomingSlots(
             @RequestParam(defaultValue = "7") int days) {
