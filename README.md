@@ -3,10 +3,10 @@
 > **Assessment Submission — Round 2 Full Stack Developer Practical Assessment**  
 > *A production-grade, modular full-stack grocery web application featuring dynamic catalog management, atomic stock validation, smart pickup slot capacity reservation, order fulfillment queues, 7-day return/exchange workflows, and role-based access control (RBAC).*
 
-### 🌐 Live Public Application
-- **Live URL**: [https://e56c11847f050f.lhr.life](https://e56c11847f050f.lhr.life)
-- **Local Fallback**: `http://localhost:8082`
+## 🌐 Application Access
 
+### Source Code
+[GitHub Repository](https://github.com/naznin21/mini-dmart-assessment)
 ---
 
 ## 📋 Table of Contents
