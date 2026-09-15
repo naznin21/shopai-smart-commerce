@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -51,7 +50,6 @@ public class OrderService {
     @Value("${app.returns.eligibility-days:7}")
     private int returnEligibilityDays;
 
-    @Transactional
     public OrderDto checkout(CheckoutRequest request, String ipAddress) {
         String email = SecurityUtils.getCurrentUserEmail();
         User user = userRepository.findByEmail(email)
@@ -117,6 +115,7 @@ public class OrderService {
             productRepository.save(product);
 
             OrderItem orderItem = OrderItem.builder()
+                    .id(UUID.randomUUID().toString())
                     .product(product)
                     .productName(product.getName())
                     .productUnit(product.getUnit())
@@ -165,12 +164,8 @@ public class OrderService {
                 .status(OrderStatus.PLACED)
                 .paymentMethod(request.getPaymentMethod())
                 .paymentStatus(paymentStatus)
+                .items(orderItems)
                 .build();
-
-        for (OrderItem item : orderItems) {
-            item.setOrder(order);
-        }
-        order.setItems(orderItems);
 
         Order savedOrder = orderRepository.save(order);
 
@@ -182,7 +177,7 @@ public class OrderService {
                 user.getEmail(),
                 AuditAction.ORDER_CREATE,
                 "ORDER",
-                String.valueOf(savedOrder.getId()),
+                savedOrder.getId(),
                 "Placed order " + savedOrder.getOrderNumber() + " total: ₹" + savedOrder.getTotalAmount(),
                 ipAddress
         );
@@ -190,8 +185,7 @@ public class OrderService {
         return mapToDto(savedOrder);
     }
 
-    @Transactional(readOnly = true)
-    public OrderDto getOrderById(Long orderId) {
+    public OrderDto getOrderById(String orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
@@ -199,7 +193,6 @@ public class OrderService {
         return mapToDto(order);
     }
 
-    @Transactional(readOnly = true)
     public OrderDto getOrderByOrderNumber(String orderNumber) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with number: " + orderNumber));
@@ -208,7 +201,6 @@ public class OrderService {
         return mapToDto(order);
     }
 
-    @Transactional(readOnly = true)
     public List<OrderDto> getCustomerOrders() {
         String email = SecurityUtils.getCurrentUserEmail();
         return orderRepository.findByUser_EmailOrderByCreatedAtDesc(email).stream()
@@ -216,29 +208,25 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
     public List<OrderDto> getAllOrders() {
         return orderRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
     public List<OrderDto> getOrdersByStatus(OrderStatus status) {
         return orderRepository.findByStatusOrderByCreatedAtDesc(status).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
     public List<OrderDto> getOrdersByType(OrderType orderType) {
         return orderRepository.findByOrderTypeOrderByCreatedAtDesc(orderType).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public OrderDto cancelOrder(Long orderId, CancelOrderRequest request, String ipAddress) {
+    public OrderDto cancelOrder(String orderId, CancelOrderRequest request, String ipAddress) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
@@ -256,10 +244,15 @@ public class OrderService {
         }
 
         // Restore stock
-        for (OrderItem item : order.getItems()) {
-            Product product = item.getProduct();
-            product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
-            productRepository.save(product);
+        if (order.getItems() != null) {
+            for (OrderItem item : order.getItems()) {
+                if (item.getProduct() != null && item.getProduct().getId() != null) {
+                    productRepository.findById(item.getProduct().getId()).ifPresent(product -> {
+                        product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+                        productRepository.save(product);
+                    });
+                }
+            }
         }
 
         // Release slot if store pickup
@@ -273,7 +266,7 @@ public class OrderService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.ORDER_CANCEL,
                 "ORDER",
-                String.valueOf(saved.getId()),
+                saved.getId(),
                 "Cancelled order " + saved.getOrderNumber() + ". Reason: " + request.getReason(),
                 ipAddress
         );
@@ -281,8 +274,7 @@ public class OrderService {
         return mapToDto(saved);
     }
 
-    @Transactional
-    public OrderDto updateOrderStatus(Long orderId, UpdateOrderStatusRequest request, String ipAddress) {
+    public OrderDto updateOrderStatus(String orderId, UpdateOrderStatusRequest request, String ipAddress) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
 
@@ -308,7 +300,7 @@ public class OrderService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.ORDER_STATUS_CHANGE,
                 "ORDER",
-                String.valueOf(saved.getId()),
+                saved.getId(),
                 String.format("Updated order %s status from %s to %s", saved.getOrderNumber(), oldStatus, newStatus),
                 ipAddress
         );
@@ -321,25 +313,30 @@ public class OrderService {
             return;
         }
         String currentEmail = SecurityUtils.getCurrentUserEmail();
-        if (!order.getUser().getEmail().equalsIgnoreCase(currentEmail)) {
+        if (order.getUser() != null && !order.getUser().getEmail().equalsIgnoreCase(currentEmail)) {
             throw new ForbiddenException("Access denied: You do not own this order.");
         }
     }
 
     public OrderDto mapToDto(Order order) {
-        List<OrderItemDto> itemDtos = order.getItems().stream()
-                .map(item -> OrderItemDto.builder()
-                        .id(item.getId())
-                        .productId(item.getProduct() != null ? item.getProduct().getId() : null)
-                        .productName(item.getProductName())
-                        .productUnit(item.getProductUnit())
-                        .productImageUrl(item.getProductImageUrl())
-                        .unitPrice(item.getUnitPrice())
-                        .quantity(item.getQuantity())
-                        .totalPrice(item.getTotalPrice())
-                        .returned(item.isReturned())
-                        .build())
-                .collect(Collectors.toList());
+        if (order == null) return null;
+
+        List<OrderItemDto> itemDtos = new ArrayList<>();
+        if (order.getItems() != null) {
+            itemDtos = order.getItems().stream()
+                    .map(item -> OrderItemDto.builder()
+                            .id(item.getId())
+                            .productId(item.getProduct() != null ? item.getProduct().getId() : null)
+                            .productName(item.getProductName())
+                            .productUnit(item.getProductUnit())
+                            .productImageUrl(item.getProductImageUrl())
+                            .unitPrice(item.getUnitPrice())
+                            .quantity(item.getQuantity())
+                            .totalPrice(item.getTotalPrice())
+                            .returned(item.isReturned())
+                            .build())
+                    .collect(Collectors.toList());
+        }
 
         boolean canCancel = (order.getStatus() == OrderStatus.PLACED || order.getStatus() == OrderStatus.CONFIRMED);
 
@@ -348,21 +345,23 @@ public class OrderService {
 
         if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.PICKED_UP || order.getStatus() == OrderStatus.COMPLETED) {
             LocalDateTime deliveryTime = order.getDeliveredAt() != null ? order.getDeliveredAt() : order.getUpdatedAt();
-            long daysSinceDelivery = ChronoUnit.DAYS.between(deliveryTime, LocalDateTime.now());
-            if (daysSinceDelivery <= returnEligibilityDays) {
-                returnEligible = true;
-                returnEligibilityDaysLeft = Math.max(0, (int) (returnEligibilityDays - daysSinceDelivery));
-            } else {
-                returnEligibilityDaysLeft = 0;
+            if (deliveryTime != null) {
+                long daysSinceDelivery = ChronoUnit.DAYS.between(deliveryTime, LocalDateTime.now());
+                if (daysSinceDelivery <= returnEligibilityDays) {
+                    returnEligible = true;
+                    returnEligibilityDaysLeft = Math.max(0, (int) (returnEligibilityDays - daysSinceDelivery));
+                } else {
+                    returnEligibilityDaysLeft = 0;
+                }
             }
         }
 
         return OrderDto.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
-                .userId(order.getUser().getId())
-                .userName(order.getUser().getName())
-                .userEmail(order.getUser().getEmail())
+                .userId(order.getUser() != null ? order.getUser().getId() : null)
+                .userName(order.getUser() != null ? order.getUser().getName() : "")
+                .userEmail(order.getUser() != null ? order.getUser().getEmail() : "")
                 .subtotal(order.getSubtotal())
                 .discount(order.getDiscount())
                 .deliveryFee(order.getDeliveryFee())

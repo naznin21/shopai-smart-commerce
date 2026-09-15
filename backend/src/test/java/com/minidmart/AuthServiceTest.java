@@ -80,7 +80,7 @@ class AuthServiceTest {
         when(passwordEncoder.encode("Password@123")).thenReturn("encodedPassword");
 
         User savedUser = User.builder()
-                .id(1L)
+                .id("user1")
                 .name("Alice Smith")
                 .email("alice@example.com")
                 .password("encodedPassword")
@@ -114,7 +114,7 @@ class AuthServiceTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(auth);
 
         User user = User.builder()
-                .id(1L)
+                .id("user1")
                 .name("Alice Smith")
                 .email("alice@example.com")
                 .password("encodedPassword")

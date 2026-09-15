@@ -4,6 +4,7 @@ import { Product, Category } from '../types';
 import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { ProductCard } from '../components/ProductCard';
+import { AIRecommendationCarousel } from '../components/AIRecommendationCarousel';
 import {
   ArrowRight,
   Sparkles,
@@ -12,6 +13,7 @@ import {
   ShieldCheck,
   RefreshCw,
   ShoppingBag,
+  Bot,
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
@@ -40,26 +42,26 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="space-y-16 pb-12">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-900 via-emerald-800 to-slate-900 text-white pt-16 pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 text-white pt-16 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
             <div className="inline-flex items-center space-x-2 bg-emerald-500/20 border border-emerald-400/30 px-3.5 py-1.5 rounded-full text-emerald-300 text-xs font-semibold">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Smart Grocery Retail Platform</span>
+              <Bot className="w-4 h-4 text-emerald-300" />
+              <span>Next-Gen AI E-Commerce & Retail Platform</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
-              Fresh Groceries. <br />
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+              Grocery Shopping, <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300">
-                Easy Shopping. Your Way.
+                Powered by ShopAI.
               </span>
             </h1>
 
             <p className="text-base sm:text-lg text-emerald-100/90 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
-              Order fresh daily essentials, milk, fruits, snacks, and household cleaning staples. Choose between <strong>1-hour express store pickup</strong> or <strong>scheduled home delivery</strong>.
+              Conversational shopping assistance, natural language search, and smart product recommendations. Choose between <strong>1-hour express store pickup</strong> or <strong>scheduled home delivery</strong>.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-3 sm:space-y-0 sm:space-x-4 pt-4">
@@ -68,7 +70,7 @@ export const LandingPage: React.FC = () => {
                 className="w-full sm:w-auto inline-flex items-center justify-center space-x-2.5 px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-2xl shadow-xl shadow-emerald-950/40 transition duration-200 text-sm"
               >
                 <ShoppingBag className="w-5 h-5" />
-                <span>Shop Groceries Now</span>
+                <span>Explore Catalog</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
@@ -79,20 +81,21 @@ export const LandingPage: React.FC = () => {
               </Link>
             </div>
 
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-emerald-700/50 max-w-md mx-auto lg:mx-0">
-              <div>
-                <p className="text-2xl font-black text-white">100%</p>
-                <p className="text-xs text-emerald-200">Fresh & Organic</p>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-amber-300">1 Hour</p>
-                <p className="text-xs text-emerald-200">Store Pickup</p>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-teal-300">7 Days</p>
-                <p className="text-xs text-emerald-200">Easy Returns</p>
-              </div>
+            {/* Quick Natural Language Search Suggestions */}
+            <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs">
+              <span className="text-emerald-300 font-bold flex items-center space-x-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Try Natural AI Search:</span>
+              </span>
+              <Link to="/shop?keyword=healthy%20breakfast" className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-slate-200 border border-white/10 transition">
+                Healthy breakfast
+              </Link>
+              <Link to="/shop?keyword=dairy" className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-slate-200 border border-white/10 transition">
+                Dairy & Bakery
+              </Link>
+              <Link to="/shop?keyword=organic" className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-slate-200 border border-white/10 transition">
+                Organic produce
+              </Link>
             </div>
           </div>
 
@@ -107,7 +110,7 @@ export const LandingPage: React.FC = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent rounded-2xl flex items-end p-6">
                 <div>
                   <span className="bg-emerald-500 text-slate-900 text-[10px] font-black uppercase px-2 py-0.5 rounded">
-                    Daily Deal
+                    ShopAI Highlight
                   </span>
                   <h3 className="text-lg font-bold text-white mt-1">Farm Fresh Shimla Apples</h3>
                   <p className="text-xs text-emerald-200">Handpicked crisp apples with instant 17% savings</p>
@@ -116,6 +119,11 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* AI Recommendation Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <AIRecommendationCarousel />
       </section>
 
       {/* Value Pillars */}

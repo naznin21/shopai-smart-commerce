@@ -6,7 +6,6 @@ import com.minidmart.dto.ReturnExchangeRequestDto;
 import com.minidmart.entity.*;
 import com.minidmart.enums.*;
 import com.minidmart.exception.BadRequestException;
-import com.minidmart.exception.ForbiddenException;
 import com.minidmart.repository.*;
 import com.minidmart.security.UserPrincipal;
 import com.minidmart.service.AuditLogService;
@@ -40,9 +39,6 @@ class ReturnExchangeServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
-    private OrderItemRepository orderItemRepository;
-
-    @Mock
     private ProductRepository productRepository;
 
     @Mock
@@ -63,19 +59,11 @@ class ReturnExchangeServiceTest {
     void setUp() {
         ReflectionTestUtils.setField(returnExchangeService, "returnEligibilityDays", 7);
 
-        user = User.builder().id(1L).email("jane@example.com").role(Role.CUSTOMER).build();
-        product = Product.builder().id(10L).name("Butter").stockQuantity(10).price(BigDecimal.valueOf(100)).active(true).build();
-        order = Order.builder()
-                .id(200L)
-                .orderNumber("ORD-2026-DELIV")
-                .user(user)
-                .status(OrderStatus.DELIVERED)
-                .deliveredAt(LocalDateTime.now().minusDays(3))
-                .build();
-
+        user = User.builder().id("user1").email("jane@example.com").role(Role.CUSTOMER).build();
+        product = Product.builder().id("prod10").name("Butter").stockQuantity(10).price(BigDecimal.valueOf(100)).active(true).build();
+        
         orderItem = OrderItem.builder()
-                .id(300L)
-                .order(order)
+                .id("item300")
                 .product(product)
                 .productName("Butter")
                 .quantity(1)
@@ -83,7 +71,15 @@ class ReturnExchangeServiceTest {
                 .totalPrice(BigDecimal.valueOf(100))
                 .returned(false)
                 .build();
-        order.setItems(List.of(orderItem));
+
+        order = Order.builder()
+                .id("order200")
+                .orderNumber("ORD-2026-DELIV")
+                .user(user)
+                .status(OrderStatus.DELIVERED)
+                .deliveredAt(LocalDateTime.now().minusDays(3))
+                .items(List.of(orderItem))
+                .build();
 
         UserPrincipal principal = UserPrincipal.create(user);
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
@@ -93,18 +89,17 @@ class ReturnExchangeServiceTest {
     @Test
     void testCreateReturnRequest_Success() {
         when(userRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(user));
-        when(orderRepository.findById(200L)).thenReturn(Optional.of(order));
-        when(orderItemRepository.findById(300L)).thenReturn(Optional.of(orderItem));
-        when(returnRepository.existsByOrderItem_Id(300L)).thenReturn(false);
+        when(orderRepository.findById("order200")).thenReturn(Optional.of(order));
+        when(returnRepository.existsByOrderItem_Id("item300")).thenReturn(false);
         when(returnRepository.save(any(ReturnExchangeRequest.class))).thenAnswer(i -> {
             ReturnExchangeRequest r = i.getArgument(0);
-            r.setId(5000L);
+            r.setId("ret5000");
             return r;
         });
 
         CreateReturnRequest req = CreateReturnRequest.builder()
-                .orderId(200L)
-                .orderItemId(300L)
+                .orderId("order200")
+                .orderItemId("item300")
                 .requestType(RequestType.RETURN)
                 .reason(ReturnReason.QUALITY_ISSUE)
                 .reasonDetails("Package seal was broken")
@@ -123,11 +118,11 @@ class ReturnExchangeServiceTest {
         order.setDeliveredAt(LocalDateTime.now().minusDays(10));
 
         when(userRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(user));
-        when(orderRepository.findById(200L)).thenReturn(Optional.of(order));
+        when(orderRepository.findById("order200")).thenReturn(Optional.of(order));
 
         CreateReturnRequest req = CreateReturnRequest.builder()
-                .orderId(200L)
-                .orderItemId(300L)
+                .orderId("order200")
+                .orderItemId("item300")
                 .requestType(RequestType.RETURN)
                 .reason(ReturnReason.QUALITY_ISSUE)
                 .build();
@@ -138,7 +133,7 @@ class ReturnExchangeServiceTest {
     @Test
     void testProcessReturn_CompleteAndRestock() {
         ReturnExchangeRequest returnReq = ReturnExchangeRequest.builder()
-                .id(5000L)
+                .id("ret5000")
                 .requestNumber("RET-2026-TEST")
                 .order(order)
                 .orderItem(orderItem)
@@ -148,7 +143,9 @@ class ReturnExchangeServiceTest {
                 .status(ReturnStatus.APPROVED)
                 .build();
 
-        when(returnRepository.findById(5000L)).thenReturn(Optional.of(returnReq));
+        when(returnRepository.findById("ret5000")).thenReturn(Optional.of(returnReq));
+        when(orderRepository.findById("order200")).thenReturn(Optional.of(order));
+        when(productRepository.findById("prod10")).thenReturn(Optional.of(product));
         when(returnRepository.save(any(ReturnExchangeRequest.class))).thenAnswer(i -> i.getArgument(0));
 
         int initialStock = product.getStockQuantity(); // 10
@@ -159,7 +156,7 @@ class ReturnExchangeServiceTest {
                 .adminNotes("Verified and restocked")
                 .build();
 
-        ReturnExchangeRequestDto processed = returnExchangeService.processRequest(5000L, processReq, "127.0.0.1");
+        ReturnExchangeRequestDto processed = returnExchangeService.processRequest("ret5000", processReq, "127.0.0.1");
 
         assertEquals(ReturnStatus.COMPLETED, processed.getStatus());
         assertTrue(orderItem.isReturned());

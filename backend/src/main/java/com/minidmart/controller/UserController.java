@@ -43,7 +43,7 @@ public class UserController {
     @PatchMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserSummaryDto> updateUserRole(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody ChangeRoleRequest request,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();
@@ -53,7 +53,7 @@ public class UserController {
     @PatchMapping("/{id}/toggle-status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserSummaryDto> toggleUserStatus(
-            @PathVariable Long id,
+            @PathVariable String id,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();
         return ResponseEntity.ok(userService.toggleUserStatus(id, ipAddress));

@@ -57,9 +57,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> auth
-                        // Public authentication and documentation/h2 endpoints
+                        // Public authentication
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
 
                         // Public static assets & SPA routes
                         .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico", "/_redirects").permitAll()
@@ -71,6 +70,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pickup-slots/**").permitAll()
+
+                        // Public AI Endpoints (Chat, NL Search, Recommendations)
+                        .requestMatchers("/api/ai/chat", "/api/ai/search", "/api/ai/recommendations").permitAll()
 
                         // Role-based protected endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

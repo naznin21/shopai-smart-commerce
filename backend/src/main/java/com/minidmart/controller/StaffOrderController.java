@@ -36,13 +36,13 @@ public class StaffOrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
+    public ResponseEntity<OrderDto> getOrderById(@PathVariable String id) {
         return ResponseEntity.ok(orderService.getOrderById(id));
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderDto> updateOrderStatus(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody UpdateOrderStatusRequest request,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();

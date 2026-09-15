@@ -19,7 +19,7 @@ public class SecurityUtils {
         return getCurrentUser().getEmail();
     }
 
-    public static Long getCurrentUserId() {
+    public static String getCurrentUserId() {
         return getCurrentUser().getId();
     }
 

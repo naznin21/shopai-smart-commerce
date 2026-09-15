@@ -28,7 +28,7 @@ export const OrderDetailsPage: React.FC = () => {
 
   // Return Modal State
   const [isReturnModalOpen, setIsReturnModalOpen] = useState<boolean>(false);
-  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [returnReason, setReturnReason] = useState<ReturnReason>('QUALITY_ISSUE');
   const [returnDetails, setReturnDetails] = useState<string>('');
   const [submittingReturn, setSubmittingReturn] = useState<boolean>(false);
@@ -37,7 +37,7 @@ export const OrderDetailsPage: React.FC = () => {
     if (!id) return;
     try {
       setLoading(true);
-      const data = await orderService.getById(Number(id));
+      const data = await orderService.getById(id);
       setOrder(data);
     } catch (err) {
       console.error('Error loading order', err);
@@ -68,7 +68,7 @@ export const OrderDetailsPage: React.FC = () => {
     }
   };
 
-  const handleOpenReturnModal = (itemId: number) => {
+  const handleOpenReturnModal = (itemId: string) => {
     setSelectedItemId(itemId);
     setIsReturnModalOpen(true);
   };

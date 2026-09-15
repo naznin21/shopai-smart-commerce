@@ -9,7 +9,7 @@ import {
   LogOut,
   Menu,
   X,
-  Store,
+  Bot,
   ShieldCheck,
   ClipboardList,
   LayoutDashboard,
@@ -43,24 +43,29 @@ export const Navbar: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
       {/* Top Notification Bar */}
-      <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-700 text-white text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center space-x-2">
+      <div className="bg-gradient-to-r from-emerald-800 via-teal-700 to-emerald-900 text-white text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center space-x-2">
         <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-        <span>⚡ Superfast Store Pickup in 1 Hour & FREE Home Delivery on orders above ₹500!</span>
+        <span>⚡ ShopAI Smart Commerce — Express 1-Hour Pickup & FREE Home Delivery over ₹500!</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-200">
-              <Store className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
+              <Bot className="w-6 h-6" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-extrabold tracking-tight text-slate-900 leading-none">
-                Mini <span className="text-emerald-600">D-Mart</span>
-              </span>
-              <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase mt-0.5">
-                Fresh & Daily Groceries
+              <div className="flex items-center space-x-1.5">
+                <span className="text-xl font-black tracking-tight text-slate-900 leading-none">
+                  Shop<span className="text-emerald-600">AI</span>
+                </span>
+                <span className="bg-emerald-100 text-emerald-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border border-emerald-300">
+                  v2.0 AI
+                </span>
+              </div>
+              <span className="text-[9px] font-semibold text-slate-400 tracking-wider uppercase mt-0.5">
+                AI-Powered E-Commerce Platform
               </span>
             </div>
           </Link>
@@ -71,7 +76,7 @@ export const Navbar: React.FC = () => {
               to="/shop"
               className={`hover:text-emerald-600 transition ${location.pathname === '/shop' ? 'text-emerald-600 font-bold' : ''}`}
             >
-              Shop All
+              Shop Catalog
             </Link>
 
             {isAuthenticated && isCustomer && (
@@ -80,7 +85,7 @@ export const Navbar: React.FC = () => {
                   to="/dashboard"
                   className={`hover:text-emerald-600 transition ${location.pathname === '/dashboard' ? 'text-emerald-600 font-bold' : ''}`}
                 >
-                  Dashboard
+                  My Dashboard
                 </Link>
                 <Link
                   to="/orders"
@@ -116,7 +121,7 @@ export const Navbar: React.FC = () => {
           <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-xs mx-6 relative">
             <input
               type="text"
-              placeholder="Search vegetables, milk, tea..."
+              placeholder="Search or ask natural AI queries..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-100 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition"
@@ -253,7 +258,7 @@ export const Navbar: React.FC = () => {
             <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Search ShopAI catalog..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-100 border border-slate-200 focus:bg-white focus:border-emerald-500 outline-none"
@@ -263,7 +268,7 @@ export const Navbar: React.FC = () => {
 
             <div className="flex flex-col space-y-2 pt-2 text-sm font-semibold text-slate-700">
               <Link to="/shop" onClick={() => setIsMobileMenuOpen(false)} className="px-2 py-1.5 hover:bg-slate-100 rounded-lg">
-                Shop Groceries
+                Shop Catalog
               </Link>
               {isAuthenticated && isCustomer && (
                 <>

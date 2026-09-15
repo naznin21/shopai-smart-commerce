@@ -3,15 +3,16 @@ package com.minidmart.entity;
 import com.minidmart.enums.RequestType;
 import com.minidmart.enums.ReturnReason;
 import com.minidmart.enums.ReturnStatus;
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "return_exchange_requests")
+@Document(collection = "return_exchange_requests")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,51 +21,33 @@ import java.time.LocalDateTime;
 public class ReturnExchangeRequest {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(nullable = false, unique = true)
+    @Indexed(unique = true)
     private String requestNumber;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "order_item_id", nullable = false)
     private OrderItem orderItem;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private RequestType requestType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ReturnReason reason;
 
-    @Column(length = 1000)
     private String reasonDetails;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "replacement_product_id")
     private Product replacementProduct;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ReturnStatus status;
 
-    @Column(length = 1000)
     private String adminNotes;
 
-    @CreationTimestamp
-    @Column(updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
     private LocalDateTime processedAt;

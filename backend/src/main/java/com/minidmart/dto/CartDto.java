@@ -14,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CartDto {
-    private Long id;
+    private String id;
     @Builder.Default
     private List<CartItemDto> items = new ArrayList<>();
     private Integer totalQuantity;

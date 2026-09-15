@@ -27,8 +27,8 @@ public class ProductRequest {
     @DecimalMin(value = "0.00", message = "Discount price cannot be negative")
     private BigDecimal discountPrice;
 
-    @NotNull(message = "Category ID is required")
-    private Long categoryId;
+    @NotBlank(message = "Category ID is required")
+    private String categoryId;
 
     private String imageUrl;
 

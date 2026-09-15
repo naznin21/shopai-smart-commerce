@@ -8,7 +8,7 @@ export const categoryService = {
   },
 
   async getActive(): Promise<Category[]> {
-    const res = await api.get<Category[]>('/categories/active');
+    const res = await api.get<Category[]>('/categories');
     return res.data;
   },
 
@@ -17,12 +17,12 @@ export const categoryService = {
     return res.data;
   },
 
-  async update(id: number, data: { name: string; description?: string; imageUrl?: string; active?: boolean }): Promise<Category> {
+  async update(id: string, data: { name: string; description?: string; imageUrl?: string; active?: boolean }): Promise<Category> {
     const res = await api.put<Category>(`/categories/${id}`, data);
     return res.data;
   },
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await api.delete(`/categories/${id}`);
   }
 };

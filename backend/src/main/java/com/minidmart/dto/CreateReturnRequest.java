@@ -2,6 +2,7 @@ package com.minidmart.dto;
 
 import com.minidmart.enums.RequestType;
 import com.minidmart.enums.ReturnReason;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,11 +15,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateReturnRequest {
 
-    @NotNull(message = "Order ID is required")
-    private Long orderId;
+    @NotBlank(message = "Order ID is required")
+    private String orderId;
 
-    @NotNull(message = "Order Item ID is required")
-    private Long orderItemId;
+    @NotBlank(message = "Order Item ID is required")
+    private String orderItemId;
 
     @NotNull(message = "Request type is required")
     private RequestType requestType;
@@ -28,5 +29,5 @@ public class CreateReturnRequest {
 
     private String reasonDetails;
 
-    private Long replacementProductId; // For EXCHANGE
+    private String replacementProductId; // For EXCHANGE
 }

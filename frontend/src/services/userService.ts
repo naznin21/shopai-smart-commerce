@@ -7,12 +7,17 @@ export const userService = {
     return res.data;
   },
 
-  async updateUserRole(id: number, role: Role): Promise<User> {
+  async updateUserRole(id: string, role: Role): Promise<User> {
     const res = await api.patch<User>(`/users/${id}/role`, { role });
     return res.data;
   },
 
-  async toggleStatus(id: number): Promise<User> {
+  async toggleStatus(id: string): Promise<User> {
+    const res = await api.patch<User>(`/users/${id}/toggle-status`);
+    return res.data;
+  },
+
+  async toggleUserStatus(id: string): Promise<User> {
     const res = await api.patch<User>(`/users/${id}/toggle-status`);
     return res.data;
   }

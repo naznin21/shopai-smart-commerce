@@ -1,10 +1,10 @@
 package com.minidmart.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "categories")
+@Document(collection = "categories")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -13,13 +13,10 @@ import lombok.*;
 public class Category {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(length = 1000)
     private String description;
 
     private String imageUrl;

@@ -43,7 +43,7 @@ class PickupSlotServiceTest {
     @Test
     void testReserveSlot_Success() {
         PickupSlot slot = PickupSlot.builder()
-                .id(1L)
+                .id("slot1")
                 .slotDate(today)
                 .timeSlot("10:00 - 11:00")
                 .maxCapacity(10)
@@ -63,7 +63,7 @@ class PickupSlotServiceTest {
     @Test
     void testReserveSlot_FullyBooked_ThrowsBadRequest() {
         PickupSlot fullSlot = PickupSlot.builder()
-                .id(1L)
+                .id("slot1")
                 .slotDate(today)
                 .timeSlot("10:00 - 11:00")
                 .maxCapacity(10)
@@ -79,7 +79,7 @@ class PickupSlotServiceTest {
     @Test
     void testReleaseSlot_DecrementsBookedCount() {
         PickupSlot slot = PickupSlot.builder()
-                .id(1L)
+                .id("slot1")
                 .slotDate(today)
                 .timeSlot("10:00 - 11:00")
                 .maxCapacity(10)

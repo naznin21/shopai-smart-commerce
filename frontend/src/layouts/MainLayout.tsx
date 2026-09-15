@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { CartDrawer } from '../components/CartDrawer';
+import { AIChatWidget } from '../components/AIChatWidget';
 
 export const MainLayout: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ export const MainLayout: React.FC = () => {
       </main>
       <Footer />
       <CartDrawer />
+      <AIChatWidget />
     </div>
   );
 };

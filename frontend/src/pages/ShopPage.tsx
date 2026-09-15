@@ -24,8 +24,8 @@ export const ShopPage: React.FC = () => {
 
   // Filters State
   const [keyword, setKeyword] = useState<string>(searchParams.get('keyword') || '');
-  const [selectedCategory, setSelectedCategory] = useState<number | undefined>(
-    searchParams.get('category') ? Number(searchParams.get('category')) : undefined
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(
+    searchParams.get('category') || undefined
   );
   const [maxPrice, setMaxPrice] = useState<number>(500);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
@@ -69,7 +69,7 @@ export const ShopPage: React.FC = () => {
     const kw = searchParams.get('keyword');
     const cat = searchParams.get('category');
     if (kw !== null && kw !== keyword) setKeyword(kw);
-    if (cat !== null) setSelectedCategory(Number(cat));
+    if (cat !== null) setSelectedCategory(cat);
   }, [searchParams]);
 
   const handleResetFilters = () => {
@@ -82,11 +82,11 @@ export const ShopPage: React.FC = () => {
     setSearchParams({});
   };
 
-  const handleCategoryClick = (catId?: number) => {
+  const handleCategoryClick = (catId?: string) => {
     setSelectedCategory(catId);
     setCurrentPage(0);
     if (catId) {
-      setSearchParams({ ...(keyword ? { keyword } : {}), category: String(catId) });
+      setSearchParams({ ...(keyword ? { keyword } : {}), category: catId });
     } else {
       const nextParams: any = {};
       if (keyword) nextParams.keyword = keyword;

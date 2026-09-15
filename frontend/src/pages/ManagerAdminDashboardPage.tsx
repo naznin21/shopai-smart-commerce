@@ -19,6 +19,8 @@ import {
   Plus,
 } from 'lucide-react';
 
+import { aiService } from '../services/aiService';
+
 export const ManagerAdminDashboardPage: React.FC = () => {
   const [dashboard, setDashboard] = useState<ManagerAdminDashboard | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -26,6 +28,7 @@ export const ManagerAdminDashboardPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'categories' | 'users' | 'audit'>('overview');
   const [loading, setLoading] = useState<boolean>(true);
+  const [aiGenerating, setAiGenerating] = useState<boolean>(false);
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
 
@@ -71,7 +74,7 @@ export const ManagerAdminDashboardPage: React.FC = () => {
     loadData();
   }, []);
 
-  const handleRoleChange = async (userId: number, role: Role) => {
+  const handleRoleChange = async (userId: string, role: Role) => {
     try {
       await userService.updateUserRole(userId, role);
       showToast(`Role updated to ${role}`, 'success');
@@ -81,13 +84,36 @@ export const ManagerAdminDashboardPage: React.FC = () => {
     }
   };
 
-  const handleToggleUser = async (userId: number) => {
+  const handleToggleUser = async (userId: string) => {
     try {
       await userService.toggleStatus(userId);
       showToast('User account status updated', 'success');
       loadData();
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Failed to toggle status', 'error');
+    }
+  };
+
+  const handleGenerateAiDescription = async () => {
+    if (!prodName.trim()) {
+      showToast('Please enter a product title first!', 'error');
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const selectedCat = categories.find((c) => c.id === prodCatId);
+      const res = await aiService.generateProductDescription({
+        name: prodName,
+        category: selectedCat?.name,
+        price: prodPrice ? Number(prodPrice) : undefined,
+        unit: prodUnit,
+      });
+      setProdDesc(res.description);
+      showToast('AI description generated!', 'success');
+    } catch (err: any) {
+      showToast('Failed to generate AI description', 'error');
+    } finally {
+      setAiGenerating(false);
     }
   };
 
@@ -118,7 +144,7 @@ export const ManagerAdminDashboardPage: React.FC = () => {
         description: prodDesc.trim() || undefined,
         price: Number(prodPrice),
         discountPrice: prodDiscPrice ? Number(prodDiscPrice) : undefined,
-        categoryId: Number(prodCatId),
+        categoryId: prodCatId,
         imageUrl: prodImage.trim() || undefined,
         stockQuantity: Number(prodStock),
         lowStockThreshold: Number(prodThreshold),
@@ -619,6 +645,28 @@ export const ManagerAdminDashboardPage: React.FC = () => {
                 className="w-full p-2.5 rounded-xl border border-slate-200 text-xs"
               />
             </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700 uppercase">Product Description</label>
+              <button
+                type="button"
+                onClick={handleGenerateAiDescription}
+                disabled={aiGenerating}
+                className="inline-flex items-center space-x-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{aiGenerating ? 'Generating...' : 'AI Generate Description'}</span>
+              </button>
+            </div>
+            <textarea
+              rows={3}
+              value={prodDesc}
+              onChange={(e) => setProdDesc(e.target.value)}
+              placeholder="Detailed description or click AI Generate..."
+              className="w-full p-2.5 rounded-xl border border-slate-200 text-xs"
+            />
           </div>
 
           <div>

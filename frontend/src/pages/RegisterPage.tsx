@@ -76,7 +76,7 @@ export const RegisterPage: React.FC = () => {
             Create Your Account
           </h2>
           <p className="text-xs text-slate-500">
-            Join Mini D-Mart for smart store pickup, express delivery, and exclusive grocery discounts
+            Join ShopAI for AI-assisted shopping, express pickup, and exclusive grocery discounts
           </p>
         </div>
 

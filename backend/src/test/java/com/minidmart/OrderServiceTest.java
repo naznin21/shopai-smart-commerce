@@ -6,7 +6,6 @@ import com.minidmart.dto.OrderDto;
 import com.minidmart.entity.*;
 import com.minidmart.enums.*;
 import com.minidmart.exception.BadRequestException;
-import com.minidmart.exception.ForbiddenException;
 import com.minidmart.repository.CartRepository;
 import com.minidmart.repository.OrderRepository;
 import com.minidmart.repository.ProductRepository;
@@ -26,10 +25,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -73,17 +70,17 @@ class OrderServiceTest {
         ReflectionTestUtils.setField(orderService, "returnEligibilityDays", 7);
 
         user = User.builder()
-                .id(1L)
+                .id("user1")
                 .name("John Doe")
                 .email("john@example.com")
                 .role(Role.CUSTOMER)
                 .active(true)
                 .build();
 
-        Category category = Category.builder().id(1L).name("Dairy").build();
+        Category category = Category.builder().id("cat1").name("Dairy").build();
 
         product = Product.builder()
-                .id(10L)
+                .id("prod10")
                 .name("Organic Milk")
                 .price(BigDecimal.valueOf(60.0))
                 .discountPrice(BigDecimal.valueOf(50.0))
@@ -92,11 +89,10 @@ class OrderServiceTest {
                 .active(true)
                 .build();
 
-        cart = Cart.builder().id(100L).user(user).items(new ArrayList<>()).build();
+        cart = Cart.builder().id("cart100").user(user).items(new ArrayList<>()).build();
 
         cartItem = CartItem.builder()
-                .id(500L)
-                .cart(cart)
+                .id("item500")
                 .product(product)
                 .quantity(2)
                 .unitPrice(BigDecimal.valueOf(50.0))
@@ -112,10 +108,10 @@ class OrderServiceTest {
     void testCheckout_Success_HomeDelivery() {
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
         when(cartRepository.findByUser_Email("john@example.com")).thenReturn(Optional.of(cart));
-        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(productRepository.findById("prod10")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order o = invocation.getArgument(0);
-            o.setId(1000L);
+            o.setId("order1000");
             return o;
         });
 
@@ -143,7 +139,7 @@ class OrderServiceTest {
 
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
         when(cartRepository.findByUser_Email("john@example.com")).thenReturn(Optional.of(cart));
-        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(productRepository.findById("prod10")).thenReturn(Optional.of(product));
 
         CheckoutRequest request = CheckoutRequest.builder()
                 .orderType(OrderType.HOME_DELIVERY)
@@ -158,7 +154,7 @@ class OrderServiceTest {
     @Test
     void testCancelOrder_Success_RestoresStock() {
         Order order = Order.builder()
-                .id(1000L)
+                .id("order1000")
                 .orderNumber("ORD-2026-TEST")
                 .user(user)
                 .subtotal(BigDecimal.valueOf(100))
@@ -173,11 +169,12 @@ class OrderServiceTest {
                         .build()))
                 .build();
 
-        when(orderRepository.findById(1000L)).thenReturn(Optional.of(order));
+        when(orderRepository.findById("order1000")).thenReturn(Optional.of(order));
+        when(productRepository.findById("prod10")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
 
         int initialStock = product.getStockQuantity(); // 15
-        OrderDto cancelled = orderService.cancelOrder(1000L, new CancelOrderRequest("Changed my mind"), "127.0.0.1");
+        OrderDto cancelled = orderService.cancelOrder("order1000", new CancelOrderRequest("Changed my mind"), "127.0.0.1");
 
         assertEquals(OrderStatus.CANCELLED, cancelled.getStatus());
         assertEquals(initialStock + 2, product.getStockQuantity()); // 15 + 2 = 17
@@ -186,16 +183,16 @@ class OrderServiceTest {
     @Test
     void testCancelOrder_AfterPreparation_ThrowsBadRequest() {
         Order order = Order.builder()
-                .id(1000L)
+                .id("order1000")
                 .orderNumber("ORD-2026-TEST")
                 .user(user)
                 .status(OrderStatus.PREPARING)
                 .orderType(OrderType.HOME_DELIVERY)
                 .build();
 
-        when(orderRepository.findById(1000L)).thenReturn(Optional.of(order));
+        when(orderRepository.findById("order1000")).thenReturn(Optional.of(order));
 
         assertThrows(BadRequestException.class, () ->
-                orderService.cancelOrder(1000L, new CancelOrderRequest("Too late"), "127.0.0.1"));
+                orderService.cancelOrder("order1000", new CancelOrderRequest("Too late"), "127.0.0.1"));
     }
 }

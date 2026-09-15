@@ -71,7 +71,7 @@ export const LoginPage: React.FC = () => {
             <Store className="w-8 h-8" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Welcome to Mini D-Mart
+            Welcome to ShopAI
           </h2>
           <p className="text-xs text-slate-500">
             Sign in to manage your grocery cart, track orders, or access operations

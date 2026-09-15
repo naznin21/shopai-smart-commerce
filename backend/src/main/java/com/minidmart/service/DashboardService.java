@@ -15,7 +15,6 @@ import com.minidmart.repository.UserRepository;
 import com.minidmart.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -37,13 +36,11 @@ public class DashboardService {
     private final AuditLogService auditLogService;
     private final ReturnExchangeService returnExchangeService;
 
-    @Transactional(readOnly = true)
     public CustomerDashboardDto getCustomerDashboard() {
         String email = SecurityUtils.getCurrentUserEmail();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Greeting based on time
         LocalTime now = LocalTime.now();
         String greeting;
         if (now.isBefore(LocalTime.NOON)) {
@@ -76,7 +73,7 @@ public class DashboardService {
         BigDecimal totalSpent = BigDecimal.ZERO;
         BigDecimal totalSavings = BigDecimal.ZERO;
         Map<String, Integer> categoryCounts = new HashMap<>();
-        Map<Long, Product> orderedProducts = new LinkedHashMap<>();
+        Map<String, Product> orderedProducts = new LinkedHashMap<>();
 
         for (Order o : customerOrders) {
             if (o.getStatus() != OrderStatus.CANCELLED) {
@@ -88,11 +85,11 @@ public class DashboardService {
                 }
                 if (o.getItems() != null) {
                     for (OrderItem item : o.getItems()) {
-                        if (item.getProduct() != null) {
+                        if (item.getProduct() != null && item.getProduct().getId() != null) {
                             orderedProducts.putIfAbsent(item.getProduct().getId(), item.getProduct());
                             if (item.getProduct().getCategory() != null) {
                                 String catName = item.getProduct().getCategory().getName();
-                                categoryCounts.put(catName, categoryCounts.getOrDefault(catName, 0) + item.getQuantity());
+                                categoryCounts.put(catName, categoryCounts.getOrDefault(catName, 0) + (item.getQuantity() != null ? item.getQuantity() : 1));
                             }
                         }
                     }
@@ -124,7 +121,6 @@ public class DashboardService {
                 .build();
     }
 
-    @Transactional(readOnly = true)
     public StaffDashboardDto getStaffDashboard() {
         long newOrders = orderRepository.countByStatus(OrderStatus.PLACED);
         long preparing = orderRepository.countByStatus(OrderStatus.PREPARING);
@@ -132,7 +128,7 @@ public class DashboardService {
         long outForDelivery = orderRepository.countByStatus(OrderStatus.OUT_FOR_DELIVERY);
         long pendingReturns = returnRepository.countByStatus(ReturnStatus.REQUESTED);
         long lowStock = productRepository.countLowStockProducts();
-        long outOfStock = productRepository.countOutOfStockProducts();
+        long outOfStock = productRepository.countByActiveTrueAndStockQuantityEquals(0);
 
         // Urgent orders: PLACED and PREPARING
         List<OrderDto> urgentOrders = orderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.PLACED).stream()
@@ -157,16 +153,24 @@ public class DashboardService {
                 .build();
     }
 
-    @Transactional(readOnly = true)
     public ManagerAdminDashboardDto getManagerAdminDashboard() {
         long totalUsers = userRepository.count();
         long totalProducts = productRepository.count();
         long totalOrders = orderRepository.count();
 
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
-        long todayOrders = orderRepository.countOrdersSince(startOfToday);
-        BigDecimal totalRevenue = orderRepository.calculateTotalRevenue();
-        BigDecimal todayRevenue = orderRepository.calculateRevenueSince(startOfToday);
+        long todayOrders = orderRepository.countByCreatedAtGreaterThanEqual(startOfToday);
+
+        // Revenue calculations
+        List<Order> allNonCancelledOrders = orderRepository.findByStatusNot(OrderStatus.CANCELLED);
+        BigDecimal totalRevenue = allNonCancelledOrders.stream()
+                .map(o -> o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal todayRevenue = allNonCancelledOrders.stream()
+                .filter(o -> o.getCreatedAt() != null && !o.getCreatedAt().isBefore(startOfToday))
+                .map(o -> o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long pendingOrders = orderRepository.countByStatus(OrderStatus.PLACED)
                 + orderRepository.countByStatus(OrderStatus.CONFIRMED)
@@ -191,8 +195,8 @@ public class DashboardService {
                 .totalProductsCount(totalProducts)
                 .totalOrdersCount(totalOrders)
                 .todayOrdersCount(todayOrders)
-                .totalRevenue(totalRevenue != null ? totalRevenue : BigDecimal.ZERO)
-                .todayRevenue(todayRevenue != null ? todayRevenue : BigDecimal.ZERO)
+                .totalRevenue(totalRevenue)
+                .todayRevenue(todayRevenue)
                 .pendingOrdersCount(pendingOrders)
                 .lowStockCount(lowStock)
                 .pendingReturnsCount(pendingReturns)

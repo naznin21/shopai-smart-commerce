@@ -7,17 +7,17 @@ export const cartService = {
     return res.data;
   },
 
-  async addToCart(productId: number, quantity: number = 1): Promise<Cart> {
+  async addToCart(productId: string, quantity: number = 1): Promise<Cart> {
     const res = await api.post<Cart>('/cart/items', { productId, quantity });
     return res.data;
   },
 
-  async updateItemQuantity(itemId: number, quantity: number): Promise<Cart> {
+  async updateItemQuantity(itemId: string, quantity: number): Promise<Cart> {
     const res = await api.put<Cart>(`/cart/items/${itemId}`, { quantity });
     return res.data;
   },
 
-  async removeItem(itemId: number): Promise<Cart> {
+  async removeItem(itemId: string): Promise<Cart> {
     const res = await api.delete<Cart>(`/cart/items/${itemId}`);
     return res.data;
   }

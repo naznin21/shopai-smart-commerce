@@ -1,15 +1,15 @@
 package com.minidmart.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "products")
+@Document(collection = "products")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,46 +18,35 @@ import java.time.LocalDateTime;
 public class Product {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(length = 2000)
     private String description;
 
-    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    @Column(precision = 10, scale = 2)
     private BigDecimal discountPrice;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
     private String imageUrl;
 
-    @Column(nullable = false)
     private Integer stockQuantity;
 
-    @Column(nullable = false)
     @Builder.Default
     private Integer lowStockThreshold = 5;
 
-    @Column(nullable = false)
     @Builder.Default
     private String unit = "1 unit";
 
     @Builder.Default
     private boolean active = true;
 
-    @CreationTimestamp
-    @Column(updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
     public BigDecimal getEffectivePrice() {

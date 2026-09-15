@@ -3,7 +3,7 @@ import { Product } from '../types';
 
 export interface ProductSearchParams {
   keyword?: string;
-  categoryId?: number;
+  categoryId?: string;
   maxPrice?: number;
   inStockOnly?: boolean;
   sortBy?: 'newest' | 'price_asc' | 'price_desc';
@@ -30,7 +30,7 @@ export const productService = {
     return res.data;
   },
 
-  async getById(id: number): Promise<Product> {
+  async getById(id: string): Promise<Product> {
     const res = await api.get<Product>(`/products/${id}`);
     return res.data;
   },
@@ -40,17 +40,17 @@ export const productService = {
     return res.data;
   },
 
-  async update(id: number, data: any): Promise<Product> {
+  async update(id: string, data: any): Promise<Product> {
     const res = await api.put<Product>(`/products/${id}`, data);
     return res.data;
   },
 
-  async updateStock(id: number, stockQuantity: number): Promise<Product> {
+  async updateStock(id: string, stockQuantity: number): Promise<Product> {
     const res = await api.patch<Product>(`/products/${id}/stock`, { stockQuantity });
     return res.data;
   },
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await api.delete(`/products/${id}`);
   }
 };

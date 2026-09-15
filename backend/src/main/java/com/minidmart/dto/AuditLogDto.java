@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuditLogDto {
-    private Long id;
+    private String id;
     private String userEmail;
     private AuditAction action;
     private String entityType;

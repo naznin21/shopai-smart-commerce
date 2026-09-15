@@ -22,7 +22,7 @@ export const OrderConfirmationPage: React.FC = () => {
     if (!order && id) {
       setLoading(true);
       orderService
-        .getById(Number(id))
+        .getById(id)
         .then(setOrder)
         .catch(console.error)
         .finally(() => setLoading(false));

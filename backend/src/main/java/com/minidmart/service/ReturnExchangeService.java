@@ -14,11 +14,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,7 +29,6 @@ public class ReturnExchangeService {
 
     private final ReturnExchangeRequestRepository returnRepository;
     private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
@@ -37,7 +36,6 @@ public class ReturnExchangeService {
     @Value("${app.returns.eligibility-days:7}")
     private int returnEligibilityDays;
 
-    @Transactional
     public ReturnExchangeRequestDto createRequest(CreateReturnRequest request, String ipAddress) {
         String email = SecurityUtils.getCurrentUserEmail();
         User user = userRepository.findByEmail(email)
@@ -47,7 +45,7 @@ public class ReturnExchangeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + request.getOrderId()));
 
         // Ownership enforcement
-        if (!order.getUser().getEmail().equalsIgnoreCase(email)) {
+        if (order.getUser() != null && !order.getUser().getEmail().equalsIgnoreCase(email)) {
             throw new ForbiddenException("Access denied: You can only request returns on your own orders.");
         }
 
@@ -58,19 +56,23 @@ public class ReturnExchangeService {
 
         // 7-day eligibility rule
         LocalDateTime deliveryTime = order.getDeliveredAt() != null ? order.getDeliveredAt() : order.getUpdatedAt();
-        long daysSinceDelivery = ChronoUnit.DAYS.between(deliveryTime, LocalDateTime.now());
-        if (daysSinceDelivery > returnEligibilityDays) {
-            throw new BadRequestException(String.format(
-                    "The return window for this order has expired (%d days since delivery, policy is %d days).",
-                    daysSinceDelivery, returnEligibilityDays));
+        if (deliveryTime != null) {
+            long daysSinceDelivery = ChronoUnit.DAYS.between(deliveryTime, LocalDateTime.now());
+            if (daysSinceDelivery > returnEligibilityDays) {
+                throw new BadRequestException(String.format(
+                        "The return window for this order has expired (%d days since delivery, policy is %d days).",
+                        daysSinceDelivery, returnEligibilityDays));
+            }
         }
 
-        OrderItem orderItem = orderItemRepository.findById(request.getOrderItemId())
+        if (order.getItems() == null) {
+            throw new BadRequestException("Order contains no items.");
+        }
+
+        OrderItem orderItem = order.getItems().stream()
+                .filter(item -> request.getOrderItemId().equals(item.getId()))
+                .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Order item not found with id: " + request.getOrderItemId()));
-
-        if (!orderItem.getOrder().getId().equals(order.getId())) {
-            throw new BadRequestException("The specified item does not belong to this order.");
-        }
 
         if (orderItem.isReturned() || returnRepository.existsByOrderItem_Id(orderItem.getId())) {
             throw new BadRequestException("A return or exchange request has already been processed or is active for this item.");
@@ -111,7 +113,7 @@ public class ReturnExchangeService {
                 user.getEmail(),
                 request.getRequestType() == RequestType.RETURN ? AuditAction.RETURN_REQUEST : AuditAction.EXCHANGE_REQUEST,
                 "RETURN_EXCHANGE",
-                String.valueOf(saved.getId()),
+                saved.getId(),
                 "Submitted " + request.getRequestType() + " request " + saved.getRequestNumber() + " for '" + orderItem.getProductName() + "'",
                 ipAddress
         );
@@ -119,7 +121,6 @@ public class ReturnExchangeService {
         return mapToDto(saved);
     }
 
-    @Transactional(readOnly = true)
     public List<ReturnExchangeRequestDto> getCustomerRequests() {
         String email = SecurityUtils.getCurrentUserEmail();
         return returnRepository.findByUser_EmailOrderByCreatedAtDesc(email).stream()
@@ -127,34 +128,30 @@ public class ReturnExchangeService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
     public List<ReturnExchangeRequestDto> getAllRequests() {
         return returnRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
     public List<ReturnExchangeRequestDto> getRequestsByStatus(ReturnStatus status) {
         return returnRepository.findByStatusOrderByCreatedAtDesc(status).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public ReturnExchangeRequestDto getRequestById(Long id) {
+    public ReturnExchangeRequestDto getRequestById(String id) {
         ReturnExchangeRequest request = returnRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Return request not found with id: " + id));
 
-        if (!SecurityUtils.isStaffOrAbove() && !request.getUser().getEmail().equalsIgnoreCase(SecurityUtils.getCurrentUserEmail())) {
+        if (!SecurityUtils.isStaffOrAbove() && (request.getUser() == null || !request.getUser().getEmail().equalsIgnoreCase(SecurityUtils.getCurrentUserEmail()))) {
             throw new ForbiddenException("Access denied: You do not have permission to view this request.");
         }
 
         return mapToDto(request);
     }
 
-    @Transactional
-    public ReturnExchangeRequestDto processRequest(Long requestId, ProcessReturnRequest processDto, String ipAddress) {
+    public ReturnExchangeRequestDto processRequest(String requestId, ProcessReturnRequest processDto, String ipAddress) {
         ReturnExchangeRequest request = returnRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Return request not found with id: " + requestId));
 
@@ -167,7 +164,6 @@ public class ReturnExchangeService {
         OrderItem orderItem = request.getOrderItem();
 
         if (newStatus == ReturnStatus.APPROVED) {
-            // If exchange approved, reserve the replacement item stock
             if (request.getRequestType() == RequestType.EXCHANGE && request.getReplacementProduct() != null) {
                 Product replacement = request.getReplacementProduct();
                 if (replacement.getStockQuantity() < orderItem.getQuantity()) {
@@ -178,16 +174,32 @@ public class ReturnExchangeService {
             }
         } else if (newStatus == ReturnStatus.COMPLETED) {
             request.setProcessedAt(LocalDateTime.now());
-            orderItem.setReturned(true);
-            orderItemRepository.save(orderItem);
+            if (orderItem != null) {
+                orderItem.setReturned(true);
+            }
+
+            // Also update the order document items list
+            if (request.getOrder() != null && request.getOrder().getId() != null) {
+                orderRepository.findById(request.getOrder().getId()).ifPresent(ord -> {
+                    if (ord.getItems() != null) {
+                        for (OrderItem it : ord.getItems()) {
+                            if (it.getId().equals(orderItem.getId())) {
+                                it.setReturned(true);
+                            }
+                        }
+                        orderRepository.save(ord);
+                    }
+                });
+            }
 
             // If it's a Return and restock is requested (only for non-damaged/non-expired items)
             if (request.getRequestType() == RequestType.RETURN && processDto.isRestockInventory()) {
                 if (request.getReason() != ReturnReason.DAMAGED && request.getReason() != ReturnReason.EXPIRED) {
-                    Product origProduct = orderItem.getProduct();
-                    if (origProduct != null) {
-                        origProduct.setStockQuantity(origProduct.getStockQuantity() + orderItem.getQuantity());
-                        productRepository.save(origProduct);
+                    if (orderItem != null && orderItem.getProduct() != null && orderItem.getProduct().getId() != null) {
+                        productRepository.findById(orderItem.getProduct().getId()).ifPresent(origProduct -> {
+                            origProduct.setStockQuantity(origProduct.getStockQuantity() + orderItem.getQuantity());
+                            productRepository.save(origProduct);
+                        });
                     }
                 }
             }
@@ -206,7 +218,7 @@ public class ReturnExchangeService {
                 SecurityUtils.getCurrentUserEmail(),
                 auditAction,
                 "RETURN_EXCHANGE",
-                String.valueOf(saved.getId()),
+                saved.getId(),
                 String.format("Processed %s request %s to status %s", request.getRequestType(), saved.getRequestNumber(), newStatus),
                 ipAddress
         );
@@ -215,18 +227,19 @@ public class ReturnExchangeService {
     }
 
     public ReturnExchangeRequestDto mapToDto(ReturnExchangeRequest r) {
+        if (r == null) return null;
         return ReturnExchangeRequestDto.builder()
                 .id(r.getId())
                 .requestNumber(r.getRequestNumber())
-                .orderId(r.getOrder().getId())
-                .orderNumber(r.getOrder().getOrderNumber())
-                .orderItemId(r.getOrderItem().getId())
-                .productName(r.getOrderItem().getProductName())
-                .productImageUrl(r.getOrderItem().getProductImageUrl())
-                .itemQuantity(r.getOrderItem().getQuantity())
-                .userId(r.getUser().getId())
-                .userEmail(r.getUser().getEmail())
-                .userName(r.getUser().getName())
+                .orderId(r.getOrder() != null ? r.getOrder().getId() : null)
+                .orderNumber(r.getOrder() != null ? r.getOrder().getOrderNumber() : "")
+                .orderItemId(r.getOrderItem() != null ? r.getOrderItem().getId() : null)
+                .productName(r.getOrderItem() != null ? r.getOrderItem().getProductName() : "")
+                .productImageUrl(r.getOrderItem() != null ? r.getOrderItem().getProductImageUrl() : null)
+                .itemQuantity(r.getOrderItem() != null ? r.getOrderItem().getQuantity() : 0)
+                .userId(r.getUser() != null ? r.getUser().getId() : null)
+                .userEmail(r.getUser() != null ? r.getUser().getEmail() : "")
+                .userName(r.getUser() != null ? r.getUser().getName() : "")
                 .requestType(r.getRequestType())
                 .reason(r.getReason())
                 .reasonDetails(r.getReasonDetails())

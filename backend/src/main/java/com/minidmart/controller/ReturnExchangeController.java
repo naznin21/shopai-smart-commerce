@@ -33,7 +33,7 @@ public class ReturnExchangeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ReturnExchangeRequestDto> getRequestById(@PathVariable Long id) {
+    public ResponseEntity<ReturnExchangeRequestDto> getRequestById(@PathVariable String id) {
         return ResponseEntity.ok(returnExchangeService.getRequestById(id));
     }
 }

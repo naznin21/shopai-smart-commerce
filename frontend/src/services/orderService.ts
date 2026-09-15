@@ -21,12 +21,17 @@ export const orderService = {
     return res.data;
   },
 
-  async getById(id: number): Promise<Order> {
+  async getById(id: string): Promise<Order> {
     const res = await api.get<Order>(`/orders/${id}`);
     return res.data;
   },
 
-  async cancelOrder(id: number, reason: string): Promise<Order> {
+  async getOrderById(id: string): Promise<Order> {
+    const res = await api.get<Order>(`/orders/${id}`);
+    return res.data;
+  },
+
+  async cancelOrder(id: string, reason: string): Promise<Order> {
     const res = await api.post<Order>(`/orders/${id}/cancel`, { reason });
     return res.data;
   },
@@ -36,7 +41,7 @@ export const orderService = {
     return res.data;
   },
 
-  async updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {
+  async updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
     const res = await api.patch<Order>(`/staff/orders/${id}/status`, { status });
     return res.data;
   }

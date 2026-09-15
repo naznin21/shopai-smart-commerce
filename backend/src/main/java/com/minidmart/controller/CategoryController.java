@@ -32,7 +32,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryDto> getCategoryById(@PathVariable Long id) {
+    public ResponseEntity<CategoryDto> getCategoryById(@PathVariable String id) {
         return ResponseEntity.ok(categoryService.getCategoryById(id));
     }
 
@@ -48,7 +48,7 @@ public class CategoryController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<CategoryDto> updateCategory(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody CategoryRequest request,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();

@@ -1,15 +1,16 @@
 package com.minidmart.entity;
 
 import com.minidmart.enums.Role;
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "users")
+@Document(collection = "users")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,34 +19,27 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Indexed(unique = true)
     private String email;
 
-    @Column(nullable = false)
     private String password;
 
     private String phone;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Role role;
 
-    @Column(length = 1000)
     private String address;
 
     @Builder.Default
     private boolean active = true;
 
-    @CreationTimestamp
-    @Column(updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 }

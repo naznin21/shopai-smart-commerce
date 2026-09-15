@@ -32,7 +32,7 @@ export type ReturnReason =
 export type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
 
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: Role;
@@ -46,7 +46,7 @@ export interface User {
 export interface AuthResponse {
   token: string;
   tokenType: string;
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: Role;
@@ -55,7 +55,7 @@ export interface AuthResponse {
 }
 
 export interface Category {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -64,7 +64,7 @@ export interface Category {
 }
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   price: number;
@@ -82,8 +82,8 @@ export interface Product {
 }
 
 export interface CartItem {
-  id: number;
-  productId: number;
+  id: string;
+  productId: string;
   productName: string;
   productUnit: string;
   productImageUrl?: string;
@@ -96,7 +96,7 @@ export interface CartItem {
 }
 
 export interface Cart {
-  id: number;
+  id: string;
   items: CartItem[];
   totalQuantity: number;
   originalSubtotal: number;
@@ -111,8 +111,8 @@ export interface Cart {
 }
 
 export interface OrderItem {
-  id: number;
-  productId?: number;
+  id: string;
+  productId?: string;
   productName: string;
   productUnit: string;
   productImageUrl?: string;
@@ -123,9 +123,9 @@ export interface OrderItem {
 }
 
 export interface Order {
-  id: number;
+  id: string;
   orderNumber: string;
-  userId: number;
+  userId: string;
   userName: string;
   userEmail: string;
   subtotal: number;
@@ -151,7 +151,7 @@ export interface Order {
 }
 
 export interface PickupSlot {
-  id?: number;
+  id?: string;
   slotDate: string;
   timeSlot: string;
   maxCapacity: number;
@@ -164,21 +164,21 @@ export interface PickupSlot {
 }
 
 export interface ReturnExchangeRequest {
-  id: number;
+  id: string;
   requestNumber: string;
-  orderId: number;
+  orderId: string;
   orderNumber: string;
-  orderItemId: number;
-  productId: number;
+  orderItemId: string;
+  productId: string;
   productName: string;
   productImageUrl?: string;
-  userId: number;
+  userId: string;
   userName: string;
   userEmail: string;
   requestType: RequestType;
   reason: ReturnReason;
   reasonDetails?: string;
-  replacementProductId?: number;
+  replacementProductId?: string;
   replacementProductName?: string;
   status: ReturnStatus;
   adminNotes?: string;
@@ -211,7 +211,7 @@ export interface StaffDashboard {
 }
 
 export interface AuditLog {
-  id: number;
+  id: string;
   userEmail: string;
   action: string;
   entityType: string;
@@ -234,4 +234,59 @@ export interface ManagerAdminDashboard {
   recentOrders: Order[];
   recentAuditLogs: AuditLog[];
   pendingReturns: ReturnExchangeRequest[];
+}
+
+// AI Feature Interfaces
+export interface AiChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  suggestedProducts?: Product[];
+  timestamp: string;
+}
+
+export interface AiChatRequest {
+  message: string;
+  userEmail?: string;
+  cartProductIds?: string[];
+}
+
+export interface AiChatResponse {
+  reply: string;
+  suggestedProducts?: Product[];
+  mode: 'GEMINI_LLM' | 'HEURISTIC_FALLBACK';
+}
+
+export interface AiSearchRequest {
+  query: string;
+}
+
+export interface AiSearchResponse {
+  interpretedQuery: string;
+  keywords?: string[];
+  maxPrice?: number;
+  categoryName?: string;
+  products: Product[];
+}
+
+export interface AiRecommendationResponse {
+  title: string;
+  subtitle: string;
+  products: Product[];
+}
+
+export interface AiDescriptionRequest {
+  name: string;
+  category?: string;
+  categoryName?: string;
+  price?: number;
+  unit?: string;
+  existingDescription?: string;
+}
+
+export interface AiDescriptionResponse {
+  description: string;
+  generatedDescription?: string;
+  bulletPoints?: string[];
+  suggestedTagline?: string;
 }

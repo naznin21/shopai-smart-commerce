@@ -11,9 +11,9 @@ interface CartContextType {
   isLoading: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addToCart: (productId: number, quantity?: number) => Promise<void>;
-  updateQuantity: (itemId: number, quantity: number) => Promise<void>;
-  removeItem: (itemId: number) => Promise<void>;
+  addToCart: (productId: string, quantity?: number) => Promise<void>;
+  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
+  removeItem: (itemId: string) => Promise<void>;
   refreshCart: () => Promise<void>;
   clearCartLocal: () => void;
 }
@@ -50,7 +50,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
-  const addToCart = async (productId: number, quantity: number = 1) => {
+  const addToCart = async (productId: string, quantity: number = 1) => {
     if (!isAuthenticated) {
       showToast('Please sign in to add items to your cart', 'warning');
       return;
@@ -69,7 +69,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateQuantity = async (itemId: number, quantity: number) => {
+  const updateQuantity = async (itemId: string, quantity: number) => {
     try {
       setIsLoading(true);
       const updatedCart = await cartService.updateItemQuantity(itemId, quantity);
@@ -85,7 +85,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const removeItem = async (itemId: number) => {
+  const removeItem = async (itemId: string) => {
     await updateQuantity(itemId, 0);
   };
 

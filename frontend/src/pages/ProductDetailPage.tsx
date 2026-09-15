@@ -4,6 +4,7 @@ import { Product } from '../types';
 import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import { StockBadge } from '../components/StockBadge';
+import { AIRecommendationCarousel } from '../components/AIRecommendationCarousel';
 import {
   ShoppingBag,
   ArrowLeft,
@@ -24,7 +25,7 @@ export const ProductDetailPage: React.FC = () => {
     if (id) {
       setLoading(true);
       productService
-        .getById(Number(id))
+        .getById(id)
         .then(setProduct)
         .catch(console.error)
         .finally(() => setLoading(false));
@@ -168,6 +169,11 @@ export const ProductDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* AI Smart Recommendations section */}
+      <div className="pt-6 border-t border-slate-200">
+        <AIRecommendationCarousel productId={product.id} categoryId={product.category?.id} />
       </div>
     </div>
   );

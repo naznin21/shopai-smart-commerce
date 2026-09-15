@@ -1,15 +1,15 @@
 package com.minidmart.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "carts")
+@Document(collection = "carts")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,17 +18,13 @@ import java.util.List;
 public class Cart {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private List<CartItem> items = new ArrayList<>();
 
-    @UpdateTimestamp
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 }

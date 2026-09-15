@@ -26,7 +26,7 @@ public class ProductController {
     @GetMapping
     public ResponseEntity<Page<ProductDto>> searchProducts(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String categoryId,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(defaultValue = "false") boolean inStockOnly,
@@ -37,7 +37,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductDto> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ProductDto> getProductById(@PathVariable String id) {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
@@ -64,7 +64,7 @@ public class ProductController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ProductDto> updateProduct(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody ProductRequest request,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();
@@ -74,7 +74,7 @@ public class ProductController {
     @PatchMapping("/{id}/stock")
     @PreAuthorize("hasAnyRole('STAFF', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ProductDto> updateProductStock(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody StockUpdateRequest request,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();
@@ -84,7 +84,7 @@ public class ProductController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(
-            @PathVariable Long id,
+            @PathVariable String id,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();
         productService.deleteProduct(id, ipAddress);

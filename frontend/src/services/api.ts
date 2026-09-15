@@ -19,12 +19,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle 401 unauth
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // If unauthorized on a protected resource, clear storage
       const requestUrl = error.config?.url || '';
       if (!requestUrl.includes('/auth/login') && !requestUrl.includes('/auth/register')) {
         localStorage.removeItem('token');

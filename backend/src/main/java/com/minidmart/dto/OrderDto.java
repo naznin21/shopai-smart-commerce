@@ -20,9 +20,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderDto {
-    private Long id;
+    private String id;
     private String orderNumber;
-    private Long userId;
+    private String userId;
     private String userName;
     private String userEmail;
     private BigDecimal subtotal;

@@ -11,9 +11,7 @@ import com.minidmart.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -44,7 +42,6 @@ public class PickupSlotService {
             "19:00 - 20:00"
     };
 
-    @Transactional
     public List<PickupSlotDto> getSlotsForDate(LocalDate date) {
         if (date == null) {
             date = LocalDate.now();
@@ -52,20 +49,11 @@ public class PickupSlotService {
 
         List<PickupSlot> slots = pickupSlotRepository.findBySlotDateOrderByTimeSlotAsc(date);
         if (slots.isEmpty()) {
-            // Auto-initialize standard slots for this date. Each slot is created in
-            // its own transaction (see PickupSlotInitializer), so a concurrent
-            // request racing to create the same date's slots (e.g. React
-            // StrictMode double-firing the checkout page's effect) can never
-            // surface as a 500 here — we just re-read afterwards.
             for (String timeSlot : DEFAULT_TIME_SLOTS) {
                 try {
                     pickupSlotInitializer.createSlotIfAbsent(date, timeSlot, defaultCapacity);
-                } catch (DataIntegrityViolationException e) {
-                    // Lost the race for this one slot to a concurrent request — the
-                    // row exists either way, so this isn't an error. Our own
-                    // transaction here is unaffected since the insert ran in a
-                    // separate (REQUIRES_NEW) transaction that rolled back cleanly.
-                    log.debug("Slot {} on {} was already created by a concurrent request", timeSlot, date);
+                } catch (Exception e) {
+                    log.debug("Slot {} on {} handling: {}", timeSlot, date, e.getMessage());
                 }
             }
             slots = pickupSlotRepository.findBySlotDateOrderByTimeSlotAsc(date);
@@ -76,7 +64,6 @@ public class PickupSlotService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
     public List<PickupSlotDto> getUpcomingSlots(int days) {
         LocalDate startDate = LocalDate.now();
         LocalDate endDate = startDate.plusDays(Math.max(1, days));
@@ -89,7 +76,6 @@ public class PickupSlotService {
         return allSlots;
     }
 
-    @Transactional
     public List<PickupSlot> initializeDefaultSlotsForDate(LocalDate date) {
         List<PickupSlot> createdSlots = new ArrayList<>();
         for (String timeSlot : DEFAULT_TIME_SLOTS) {
@@ -109,11 +95,9 @@ public class PickupSlotService {
         return createdSlots;
     }
 
-    @Transactional
     public PickupSlot reserveSlot(LocalDate date, String timeSlot) {
         PickupSlot slot = pickupSlotRepository.findBySlotDateAndTimeSlot(date, timeSlot)
                 .orElseGet(() -> {
-                    // Create if not present
                     PickupSlot newSlot = PickupSlot.builder()
                             .slotDate(date)
                             .timeSlot(timeSlot)
@@ -131,7 +115,6 @@ public class PickupSlotService {
         return pickupSlotRepository.save(slot);
     }
 
-    @Transactional
     public void releaseSlot(LocalDate date, String timeSlot) {
         if (date == null || timeSlot == null) return;
 
@@ -143,7 +126,6 @@ public class PickupSlotService {
         });
     }
 
-    @Transactional
     public PickupSlotDto createOrUpdateSlot(CreatePickupSlotRequest request, String ipAddress) {
         PickupSlot slot = pickupSlotRepository.findBySlotDateAndTimeSlot(request.getSlotDate(), request.getTimeSlot())
                 .orElseGet(() -> PickupSlot.builder()
@@ -159,7 +141,7 @@ public class PickupSlotService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.PRODUCT_UPDATE,
                 "PICKUP_SLOT",
-                String.valueOf(saved.getId()),
+                saved.getId(),
                 "Configured pickup slot capacity: " + saved.getTimeSlot() + " on " + saved.getSlotDate() + " to " + saved.getMaxCapacity(),
                 ipAddress
         );
@@ -168,6 +150,7 @@ public class PickupSlotService {
     }
 
     public PickupSlotDto mapToDto(PickupSlot slot) {
+        if (slot == null) return null;
         int available = slot.getAvailableSlots();
         boolean isAvail = slot.isAvailable();
         String statusText = isAvail

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Store, ShieldCheck, Heart, Clock, Truck, RotateCcw } from 'lucide-react';
+import { Bot, ShieldCheck, Heart, Clock, Truck, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Footer: React.FC = () => {
@@ -9,15 +9,15 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="space-y-3">
             <div className="flex items-center space-x-2 text-white">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 font-bold">
-                <Store className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold">
+                <Bot className="w-5 h-5" />
               </div>
               <span className="text-base font-extrabold tracking-tight">
-                Mini <span className="text-emerald-400">D-Mart</span>
+                Shop<span className="text-emerald-400">AI</span> Platform
               </span>
             </div>
             <p className="text-slate-400 text-xs leading-relaxed">
-              India's smart grocery retail experience. Combining 1-hour store pickup convenience with scheduled doorstep delivery.
+              Next-generation AI-powered grocery & e-commerce platform. Smart conversational assistance, natural language search, and 1-hour store pickup.
             </p>
           </div>
 
@@ -42,32 +42,32 @@ export const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="font-bold text-white uppercase text-[11px] tracking-wider mb-3">Retail Promise</h4>
+            <h4 className="font-bold text-white uppercase text-[11px] tracking-wider mb-3">ShopAI Promise</h4>
             <div className="space-y-2 text-[11px]">
               <div className="flex items-center space-x-2 text-slate-300">
                 <Clock className="w-4 h-4 text-emerald-400" />
-                <span>1-Hour Store Express Pickup</span>
+                <span>1-Hour Express Store Pickup</span>
               </div>
               <div className="flex items-center space-x-2 text-slate-300">
                 <Truck className="w-4 h-4 text-teal-400" />
                 <span>Free Home Delivery above ₹500</span>
               </div>
               <div className="flex items-center space-x-2 text-slate-300">
-                <RotateCcw className="w-4 h-4 text-blue-400" />
-                <span>Zero-Hassle Quality Returns</span>
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>AI Conversational Recommendations</span>
               </div>
               <div className="flex items-center space-x-2 text-slate-300">
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>100% Genuine Daily Essentials</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>100% Quality Assured Produce</span>
               </div>
             </div>
           </div>
         </div>
 
         <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-slate-500 text-[11px] gap-4">
-          <p>© 2026 Mini D-Mart Superstore. All rights reserved.</p>
+          <p>© 2026 ShopAI Retail Technologies Inc. All rights reserved.</p>
           <div className="flex items-center space-x-1">
-            <span>Built with precision for grocery retail</span>
+            <span>Powered by ShopAI MongoDB & AI Engine</span>
             <Heart className="w-3 h-3 text-rose-500 inline fill-rose-500" />
           </div>
         </div>

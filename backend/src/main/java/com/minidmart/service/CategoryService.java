@@ -10,7 +10,6 @@ import com.minidmart.repository.CategoryRepository;
 import com.minidmart.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,28 +21,24 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final AuditLogService auditLogService;
 
-    @Transactional(readOnly = true)
     public List<CategoryDto> getActiveCategories() {
         return categoryRepository.findByActiveTrue().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
     public List<CategoryDto> getAllCategories() {
         return categoryRepository.findAll().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public CategoryDto getCategoryById(Long id) {
+    public CategoryDto getCategoryById(String id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
         return mapToDto(category);
     }
 
-    @Transactional
     public CategoryDto createCategory(CategoryRequest request, String ipAddress) {
         String trimmedName = request.getName().trim();
         if (categoryRepository.existsByNameIgnoreCase(trimmedName)) {
@@ -63,7 +58,7 @@ public class CategoryService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.PRODUCT_CREATE,
                 "CATEGORY",
-                String.valueOf(savedCategory.getId()),
+                savedCategory.getId(),
                 "Created category: " + savedCategory.getName(),
                 ipAddress
         );
@@ -71,8 +66,7 @@ public class CategoryService {
         return mapToDto(savedCategory);
     }
 
-    @Transactional
-    public CategoryDto updateCategory(Long id, CategoryRequest request, String ipAddress) {
+    public CategoryDto updateCategory(String id, CategoryRequest request, String ipAddress) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
 
@@ -92,7 +86,7 @@ public class CategoryService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.PRODUCT_UPDATE,
                 "CATEGORY",
-                String.valueOf(updated.getId()),
+                updated.getId(),
                 "Updated category: " + updated.getName(),
                 ipAddress
         );
@@ -101,6 +95,7 @@ public class CategoryService {
     }
 
     public CategoryDto mapToDto(Category category) {
+        if (category == null) return null;
         return CategoryDto.builder()
                 .id(category.getId())
                 .name(category.getName())

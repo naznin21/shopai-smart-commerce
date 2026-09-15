@@ -1,14 +1,14 @@
 package com.minidmart.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "pickup_slots", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"slot_date", "time_slot"})
-})
+@Document(collection = "pickup_slots")
+@CompoundIndex(def = "{'slotDate': 1, 'timeSlot': 1}", unique = true)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,20 +17,15 @@ import java.time.LocalDate;
 public class PickupSlot {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "slot_date", nullable = false)
     private LocalDate slotDate;
 
-    @Column(name = "time_slot", nullable = false)
-    private String timeSlot; // e.g. "10:00 - 11:00", "11:00 - 12:00", "16:00 - 17:00", "17:00 - 18:00", "18:00 - 19:00"
+    private String timeSlot; // e.g. "10:00 - 11:00", "11:00 - 12:00", etc.
 
-    @Column(nullable = false)
     @Builder.Default
     private Integer maxCapacity = 10;
 
-    @Column(nullable = false)
     @Builder.Default
     private Integer bookedCount = 0;
 

@@ -39,7 +39,7 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
+    public ResponseEntity<OrderDto> getOrderById(@PathVariable String id) {
         return ResponseEntity.ok(orderService.getOrderById(id));
     }
 
@@ -50,7 +50,7 @@ public class OrderController {
 
     @PostMapping("/{id}/cancel")
     public ResponseEntity<OrderDto> cancelOrder(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody CancelOrderRequest request,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();

@@ -14,7 +14,6 @@ import com.minidmart.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -28,7 +27,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
 
-    @Transactional(readOnly = true)
     public UserProfileDto getCurrentUserProfile() {
         String email = SecurityUtils.getCurrentUserEmail();
         User user = userRepository.findByEmail(email)
@@ -36,7 +34,6 @@ public class UserService {
         return mapToProfileDto(user);
     }
 
-    @Transactional
     public UserProfileDto updateCurrentUserProfile(UpdateProfileRequest request, String ipAddress) {
         String email = SecurityUtils.getCurrentUserEmail();
         User user = userRepository.findByEmail(email)
@@ -73,7 +70,7 @@ public class UserService {
                 user.getEmail(),
                 AuditAction.USER_UPDATE,
                 "USER",
-                String.valueOf(user.getId()),
+                user.getId(),
                 "User updated profile details",
                 ipAddress
         );
@@ -81,15 +78,13 @@ public class UserService {
         return mapToProfileDto(updatedUser);
     }
 
-    @Transactional(readOnly = true)
     public List<UserSummaryDto> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(this::mapToSummaryDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public UserSummaryDto updateUserRole(Long userId, ChangeRoleRequest request, String ipAddress) {
+    public UserSummaryDto updateUserRole(String userId, ChangeRoleRequest request, String ipAddress) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
@@ -101,7 +96,7 @@ public class UserService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.ROLE_CHANGE,
                 "USER",
-                String.valueOf(user.getId()),
+                user.getId(),
                 String.format("Changed role for %s from %s to %s", user.getEmail(), oldRole, request.getRole()),
                 ipAddress
         );
@@ -109,8 +104,7 @@ public class UserService {
         return mapToSummaryDto(updatedUser);
     }
 
-    @Transactional
-    public UserSummaryDto toggleUserStatus(Long userId, String ipAddress) {
+    public UserSummaryDto toggleUserStatus(String userId, String ipAddress) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
@@ -121,7 +115,7 @@ public class UserService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.USER_UPDATE,
                 "USER",
-                String.valueOf(user.getId()),
+                user.getId(),
                 String.format("User %s active status changed to %b", user.getEmail(), user.isActive()),
                 ipAddress
         );
@@ -130,6 +124,7 @@ public class UserService {
     }
 
     private UserProfileDto mapToProfileDto(User user) {
+        if (user == null) return null;
         return UserProfileDto.builder()
                 .id(user.getId())
                 .name(user.getName())
@@ -144,6 +139,7 @@ public class UserService {
     }
 
     private UserSummaryDto mapToSummaryDto(User user) {
+        if (user == null) return null;
         return UserSummaryDto.builder()
                 .id(user.getId())
                 .name(user.getName())

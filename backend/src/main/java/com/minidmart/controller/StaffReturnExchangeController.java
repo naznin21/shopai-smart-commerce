@@ -31,13 +31,13 @@ public class StaffReturnExchangeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ReturnExchangeRequestDto> getRequestById(@PathVariable Long id) {
+    public ResponseEntity<ReturnExchangeRequestDto> getRequestById(@PathVariable String id) {
         return ResponseEntity.ok(returnExchangeService.getRequestById(id));
     }
 
     @PatchMapping("/{id}/process")
     public ResponseEntity<ReturnExchangeRequestDto> processRequest(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody ProcessReturnRequest request,
             HttpServletRequest servletRequest) {
         String ipAddress = servletRequest.getRemoteAddr();

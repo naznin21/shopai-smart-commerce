@@ -13,16 +13,17 @@ import com.minidmart.repository.CategoryRepository;
 import com.minidmart.repository.ProductRepository;
 import com.minidmart.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,11 +33,11 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final AuditLogService auditLogService;
+    private final MongoTemplate mongoTemplate;
 
-    @Transactional(readOnly = true)
     public Page<ProductDto> searchProducts(
             String keyword,
-            Long categoryId,
+            String categoryId,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             boolean inStockOnly,
@@ -51,34 +52,63 @@ public class ProductService {
         };
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        String cleanedKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        Query query = new Query();
+        List<Criteria> criteriaList = new ArrayList<>();
 
-        return productRepository.searchProducts(cleanedKeyword, categoryId, minPrice, maxPrice, inStockOnly, pageable)
-                .map(this::mapToDto);
+        criteriaList.add(Criteria.where("active").is(true));
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String regex = Pattern.quote(keyword.trim());
+            Criteria keywordCriteria = new Criteria().orOperator(
+                    Criteria.where("name").regex(regex, "i"),
+                    Criteria.where("description").regex(regex, "i")
+            );
+            criteriaList.add(keywordCriteria);
+        }
+
+        if (categoryId != null && !categoryId.trim().isEmpty()) {
+            criteriaList.add(Criteria.where("category.id").is(categoryId.trim()));
+        }
+
+        if (minPrice != null && maxPrice != null) {
+            criteriaList.add(Criteria.where("price").gte(minPrice).lte(maxPrice));
+        } else if (minPrice != null) {
+            criteriaList.add(Criteria.where("price").gte(minPrice));
+        } else if (maxPrice != null) {
+            criteriaList.add(Criteria.where("price").lte(maxPrice));
+        }
+
+        if (inStockOnly) {
+            criteriaList.add(Criteria.where("stockQuantity").gt(0));
+        }
+
+        query.addCriteria(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
+
+        long total = mongoTemplate.count(query, Product.class);
+        List<Product> products = mongoTemplate.find(query.with(pageable), Product.class);
+
+        List<ProductDto> dtos = products.stream().map(this::mapToDto).collect(Collectors.toList());
+        return new PageImpl<>(dtos, pageable, total);
     }
 
-    @Transactional(readOnly = true)
-    public ProductDto getProductById(Long id) {
+    public ProductDto getProductById(String id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
         return mapToDto(product);
     }
 
-    @Transactional(readOnly = true)
     public List<ProductDto> getFeaturedProducts() {
         return productRepository.findTop8ByActiveTrueOrderByCreatedAtDesc().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
     public List<ProductDto> getLowStockProducts() {
         return productRepository.findLowStockProducts().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    @Transactional
     public ProductDto createProduct(ProductRequest request, String ipAddress) {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
@@ -106,7 +136,7 @@ public class ProductService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.PRODUCT_CREATE,
                 "PRODUCT",
-                String.valueOf(saved.getId()),
+                saved.getId(),
                 "Created product: " + saved.getName() + " with stock: " + saved.getStockQuantity(),
                 ipAddress
         );
@@ -114,8 +144,7 @@ public class ProductService {
         return mapToDto(saved);
     }
 
-    @Transactional
-    public ProductDto updateProduct(Long id, ProductRequest request, String ipAddress) {
+    public ProductDto updateProduct(String id, ProductRequest request, String ipAddress) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
@@ -145,7 +174,7 @@ public class ProductService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.PRODUCT_UPDATE,
                 "PRODUCT",
-                String.valueOf(updated.getId()),
+                updated.getId(),
                 "Updated product: " + updated.getName(),
                 ipAddress
         );
@@ -153,8 +182,7 @@ public class ProductService {
         return mapToDto(updated);
     }
 
-    @Transactional
-    public ProductDto updateProductStock(Long id, StockUpdateRequest request, String ipAddress) {
+    public ProductDto updateProductStock(String id, StockUpdateRequest request, String ipAddress) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
@@ -170,7 +198,7 @@ public class ProductService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.STOCK_UPDATE,
                 "PRODUCT",
-                String.valueOf(updated.getId()),
+                updated.getId(),
                 String.format("Updated stock for '%s' from %d to %d", updated.getName(), oldStock, request.getStockQuantity()),
                 ipAddress
         );
@@ -178,8 +206,7 @@ public class ProductService {
         return mapToDto(updated);
     }
 
-    @Transactional
-    public void deleteProduct(Long id, String ipAddress) {
+    public void deleteProduct(String id, String ipAddress) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
@@ -190,13 +217,14 @@ public class ProductService {
                 SecurityUtils.getCurrentUserEmail(),
                 AuditAction.PRODUCT_DELETE,
                 "PRODUCT",
-                String.valueOf(product.getId()),
+                product.getId(),
                 "Deactivated product: " + product.getName(),
                 ipAddress
         );
     }
 
     public ProductDto mapToDto(Product product) {
+        if (product == null) return null;
         BigDecimal effectivePrice = product.getEffectivePrice();
 
         Integer discountPercentage = null;
@@ -218,13 +246,16 @@ public class ProductService {
             stockStatus = "IN_STOCK";
         }
 
-        CategoryDto categoryDto = CategoryDto.builder()
-                .id(product.getCategory().getId())
-                .name(product.getCategory().getName())
-                .description(product.getCategory().getDescription())
-                .imageUrl(product.getCategory().getImageUrl())
-                .active(product.getCategory().isActive())
-                .build();
+        CategoryDto categoryDto = null;
+        if (product.getCategory() != null) {
+            categoryDto = CategoryDto.builder()
+                    .id(product.getCategory().getId())
+                    .name(product.getCategory().getName())
+                    .description(product.getCategory().getDescription())
+                    .imageUrl(product.getCategory().getImageUrl())
+                    .active(product.getCategory().isActive())
+                    .build();
+        }
 
         return ProductDto.builder()
                 .id(product.getId())

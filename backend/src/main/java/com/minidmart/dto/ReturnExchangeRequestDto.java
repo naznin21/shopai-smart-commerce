@@ -15,21 +15,21 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReturnExchangeRequestDto {
-    private Long id;
+    private String id;
     private String requestNumber;
-    private Long orderId;
+    private String orderId;
     private String orderNumber;
-    private Long orderItemId;
+    private String orderItemId;
     private String productName;
     private String productImageUrl;
     private Integer itemQuantity;
-    private Long userId;
+    private String userId;
     private String userEmail;
     private String userName;
     private RequestType requestType;
     private ReturnReason reason;
     private String reasonDetails;
-    private Long replacementProductId;
+    private String replacementProductId;
     private String replacementProductName;
     private ReturnStatus status;
     private String adminNotes;

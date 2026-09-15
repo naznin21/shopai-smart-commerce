@@ -39,11 +39,11 @@ class SecurityOwnershipTest {
 
     @BeforeEach
     void setUp() {
-        customerA = User.builder().id(1L).email("victim@example.com").role(Role.CUSTOMER).build();
-        customerB = User.builder().id(2L).email("attacker@example.com").role(Role.CUSTOMER).build();
+        customerA = User.builder().id("user1").email("victim@example.com").role(Role.CUSTOMER).build();
+        customerB = User.builder().id("user2").email("attacker@example.com").role(Role.CUSTOMER).build();
 
         orderB = Order.builder()
-                .id(999L)
+                .id("order999")
                 .orderNumber("ORD-PRIVATE-999")
                 .user(customerA)
                 .status(OrderStatus.PLACED)
@@ -60,9 +60,9 @@ class SecurityOwnershipTest {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principalB, null, principalB.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
 
-        when(orderRepository.findById(999L)).thenReturn(Optional.of(orderB));
+        when(orderRepository.findById("order999")).thenReturn(Optional.of(orderB));
 
         // Customer B tries to view Customer A's order by ID
-        assertThrows(ForbiddenException.class, () -> orderService.getOrderById(999L));
+        assertThrows(ForbiddenException.class, () -> orderService.getOrderById("order999"));
     }
 }
