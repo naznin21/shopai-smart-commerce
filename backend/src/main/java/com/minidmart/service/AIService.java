@@ -2,8 +2,10 @@ package com.minidmart.service;
 
 import com.minidmart.dto.*;
 import com.minidmart.entity.Category;
+import com.minidmart.entity.Order;
 import com.minidmart.entity.Product;
 import com.minidmart.repository.CategoryRepository;
+import com.minidmart.repository.OrderRepository;
 import com.minidmart.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,8 @@ public class AIService {
     private final ProductRepository productRepository;
     private final ProductService productService;
     private final CategoryRepository categoryRepository;
+    private final OrderRepository orderRepository;
+    private final OrderService orderService;
     private final MongoTemplate mongoTemplate;
 
     @Value("${app.ai.gemini.api-key:}")
@@ -40,31 +44,110 @@ public class AIService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
-     * AI Shopping Assistant Chat Endpoint
+     * Enhanced AI Shopping Assistant Chat Endpoint
      */
     public AiChatResponse chat(AiChatRequest request) {
         String userMsg = request.getMessage() != null ? request.getMessage().trim() : "";
+        String userEmail = request.getUserEmail() != null ? request.getUserEmail().trim() : "";
+
         if (userMsg.isEmpty()) {
             return AiChatResponse.builder()
                     .reply("Hello! I'm your ShopAI Shopping Assistant. How can I help you with your groceries today?")
                     .suggestedProducts(Collections.emptyList())
+                    .quickActions(List.of("Healthy Breakfast under ₹300", "Track My Order", "Recipe Ingredient Bundles", "Express 1-Hour Pickup"))
                     .mode("HEURISTIC_FALLBACK")
+                    .intent("GENERAL")
                     .build();
         }
 
-        // Search candidate products from catalog for context
-        List<ProductDto> candidates = findProductsForQuery(userMsg, 4);
+        String lowerMsg = userMsg.toLowerCase();
+
+        // 1. INTENT: ORDER TRACKING & STATUS
+        if (isOrderTrackingQuery(lowerMsg)) {
+            if (!userEmail.isEmpty()) {
+                List<Order> userOrders = orderRepository.findTop5ByUser_EmailOrderByCreatedAtDesc(userEmail);
+                if (!userOrders.isEmpty()) {
+                    Order latest = userOrders.get(0);
+                    OrderDto latestDto = orderService.mapToDto(latest);
+                    String replyText = String.format(
+                            "Here is the live status for your latest order #%s:\n• Status: %s\n• Fulfillment: %s\n• Items: %d product(s)\n• Total Amount: ₹%.2f\n\nIs there anything else I can assist you with regarding this order?",
+                            latest.getOrderNumber(),
+                            latest.getStatus(),
+                            latest.getOrderType() != null ? latest.getOrderType().name().replace("_", " ") : "HOME DELIVERY",
+                            latest.getItems() != null ? latest.getItems().size() : 0,
+                            latest.getTotalAmount()
+                    );
+                    return AiChatResponse.builder()
+                            .reply(replyText)
+                            .latestOrder(latestDto)
+                            .intent("ORDER_TRACKING")
+                            .quickActions(List.of("View Order Details", "Order Cancellation Help", "Return / Exchange Request"))
+                            .mode("SMART_ASSISTANT")
+                            .build();
+                } else {
+                    return AiChatResponse.builder()
+                            .reply("I checked your ShopAI profile, but you haven't placed any orders yet! Browse our fresh catalog and start shopping today.")
+                            .intent("ORDER_TRACKING")
+                            .quickActions(List.of("Browse Catalog", "Featured Products", "Deals of the Day"))
+                            .mode("SMART_ASSISTANT")
+                            .build();
+                }
+            } else {
+                return AiChatResponse.builder()
+                        .reply("Please sign in to your ShopAI account so I can pull up your live order status and tracking details automatically!")
+                        .intent("ORDER_TRACKING")
+                        .quickActions(List.of("Go to Login Screen", "Browse Store Catalog"))
+                        .mode("SMART_ASSISTANT")
+                        .build();
+            }
+        }
+
+        // 2. INTENT: RECIPE & MEAL BUNDLE BUILDER
+        if (isRecipeQuery(lowerMsg)) {
+            RecipeBundleResult recipeBundle = buildRecipeBundle(lowerMsg);
+            if (!recipeBundle.getProducts().isEmpty()) {
+                String replyText = String.format(
+                        "Here is your customized '%s' ingredient bundle from ShopAI fresh catalog! Total bundle cost: ₹%.2f. Click below to add all ingredients to your cart instantly.",
+                        recipeBundle.getDishName(),
+                        recipeBundle.getTotalPrice()
+                );
+                return AiChatResponse.builder()
+                        .reply(replyText)
+                        .suggestedProducts(recipeBundle.getProducts())
+                        .recipeTotalPrice(recipeBundle.getTotalPrice())
+                        .intent("RECIPE_BUNDLE")
+                        .quickActions(List.of("Add Entire Bundle to Cart", "Healthy Snacks", "Tea & Coffee Essentials"))
+                        .mode("SMART_ASSISTANT")
+                        .build();
+            }
+        }
+
+        // 3. INTENT: STORE POLICY & LOGISTICS
+        if (isStorePolicyQuery(lowerMsg)) {
+            String policyReply = getStorePolicyReply(lowerMsg);
+            return AiChatResponse.builder()
+                    .reply(policyReply)
+                    .intent("STORE_POLICY")
+                    .quickActions(List.of("Browse Store Catalog", "Express Pickup Slots", "Free Delivery Threshold"))
+                    .mode("SMART_ASSISTANT")
+                    .build();
+        }
+
+        // 4. GENERAL / PRODUCT SEARCH
+        List<ProductDto> candidates = findProductsForQuery(userMsg, 6);
 
         // Try Gemini API if key is configured
         if (apiKey != null && !apiKey.trim().isEmpty()) {
             try {
-                String prompt = buildChatPrompt(userMsg, candidates);
+                String prompt = buildChatPrompt(userMsg, candidates, userEmail);
                 String geminiReply = callGeminiApi(prompt);
                 if (geminiReply != null && !geminiReply.trim().isEmpty()) {
                     return AiChatResponse.builder()
                             .reply(geminiReply.trim())
                             .suggestedProducts(candidates)
+                            .quickActions(List.of("Add All to Cart", "View More Products", "Ask Another Question"))
                             .mode("GEMINI_LLM")
+                            .intent("PRODUCT_SEARCH")
                             .build();
                 }
             } catch (Exception e) {
@@ -77,7 +160,9 @@ public class AIService {
         return AiChatResponse.builder()
                 .reply(heuristicReply)
                 .suggestedProducts(candidates)
+                .quickActions(List.of("Add All to Cart", "Healthy Breakfast under ₹300", "Dairy & Bakery"))
                 .mode("HEURISTIC_FALLBACK")
+                .intent("PRODUCT_SEARCH")
                 .build();
     }
 
@@ -137,7 +222,6 @@ public class AIService {
         String cleanQuery = queryStr.trim();
         String lowerQuery = cleanQuery.toLowerCase();
 
-        // Extract budget constraint e.g. "under 300" or "below 500" or "< 200"
         Double maxPrice = null;
         Pattern pricePattern = Pattern.compile("(?:under|below|less than|<|within|budget of)\\s*₹?\\s*(\\d+)");
         Matcher priceMatcher = pricePattern.matcher(lowerQuery);
@@ -147,7 +231,6 @@ public class AIService {
             } catch (NumberFormatException ignored) {}
         }
 
-        // Extract category name
         String matchedCategoryName = null;
         List<Category> allCategories = categoryRepository.findAll();
         for (Category cat : allCategories) {
@@ -157,7 +240,6 @@ public class AIService {
             }
         }
 
-        // Extract keywords
         List<String> keywords = new ArrayList<>();
         String[] words = lowerQuery.replaceAll("[^a-z0-9\\s]", "").split("\\s+");
         List<String> stopWords = List.of("show", "me", "find", "get", "for", "the", "a", "an", "under", "below", "less", "than", "products", "items", "i", "need", "want");
@@ -167,7 +249,6 @@ public class AIService {
             }
         }
 
-        // Execute MongoDB criteria query
         Query mongoQuery = new Query();
         List<Criteria> criteriaList = new ArrayList<>();
         criteriaList.add(Criteria.where("active").is(true));
@@ -194,7 +275,6 @@ public class AIService {
 
         List<Product> matchedProducts = mongoTemplate.find(mongoQuery, Product.class);
 
-        // Fallback: If strict criteria yielded empty results, return active products matching any keyword
         if (matchedProducts.isEmpty()) {
             matchedProducts = mongoTemplate.find(
                     Query.query(Criteria.where("active").is(true)).limit(12),
@@ -251,7 +331,6 @@ public class AIService {
             }
         }
 
-        // Heuristic Copy Generator
         String desc = String.format(
                 "Premium quality %s from our fresh %s selection (%s). Sourced with strict quality and hygiene standards to ensure maximum flavor, nutrition, and value for your kitchen.",
                 name, category, unit
@@ -272,7 +351,96 @@ public class AIService {
                 .build();
     }
 
-    // Helper: Find products matching query keywords
+    // --- Helper Methods ---
+
+    private boolean isOrderTrackingQuery(String text) {
+        return text.contains("order") || text.contains("track") || text.contains("status")
+                || text.contains("where is my") || text.contains("delivery status")
+                || text.contains("package") || text.contains("shipment");
+    }
+
+    private boolean isRecipeQuery(String text) {
+        return text.contains("recipe") || text.contains("ingredient") || text.contains("cook")
+                || text.contains("make") || text.contains("paneer") || text.contains("biryani")
+                || text.contains("pasta") || text.contains("tea time") || text.contains("breakfast")
+                || text.contains("smoothie") || text.contains("salad");
+    }
+
+    private boolean isStorePolicyQuery(String text) {
+        return text.contains("delivery fee") || text.contains("express pickup")
+                || text.contains("store time") || text.contains("return policy")
+                || text.contains("refund") || text.contains("payment option")
+                || text.contains("free delivery") || text.contains("cash on delivery");
+    }
+
+    private String getStorePolicyReply(String lowerMsg) {
+        if (lowerMsg.contains("return") || lowerMsg.contains("refund")) {
+            return "ShopAI Return Policy: We accept return and exchange requests within 7 days of delivery or pickup for quality issues, damaged goods, or incorrect items. You can request a return directly from your Order History screen!";
+        }
+        if (lowerMsg.contains("delivery") || lowerMsg.contains("fee")) {
+            return "ShopAI Shipping Policy: Standard Home Delivery is ₹40. FREE Home Delivery is automatically applied on all orders above ₹500! We also offer 1-Hour Express Store Pickup with zero delivery fees.";
+        }
+        if (lowerMsg.contains("pickup") || lowerMsg.contains("slot")) {
+            return "Express Store Pickup: Reserve your convenient 1-Hour pickup slot during checkout. Our store fulfillment staff will pack your order fresh and have it ready at our customer station!";
+        }
+        return "ShopAI Smart Commerce: Express 1-Hour Store Pickup, Free Delivery over ₹500, 7-day easy returns, and secure payments via COD or Online UPI/Cards!";
+    }
+
+    @lombok.Getter
+    @lombok.AllArgsConstructor
+    private static class RecipeBundleResult {
+        private String dishName;
+        private List<ProductDto> products;
+        private BigDecimal totalPrice;
+    }
+
+    private RecipeBundleResult buildRecipeBundle(String lowerMsg) {
+        String dishName = "Custom Recipe";
+        List<String> keywords = new ArrayList<>();
+
+        if (lowerMsg.contains("paneer")) {
+            dishName = "Paneer Butter Masala";
+            keywords = List.of("paneer", "butter", "tomato", "cream", "masala");
+        } else if (lowerMsg.contains("biryani")) {
+            dishName = "Royal Basmati Biryani";
+            keywords = List.of("basmati", "onion", "oil", "masala");
+        } else if (lowerMsg.contains("tea")) {
+            dishName = "Masala Tea & Snacks";
+            keywords = List.of("tea", "milk", "biscuit", "sugar");
+        } else if (lowerMsg.contains("breakfast")) {
+            dishName = "Healthy Morning Breakfast";
+            keywords = List.of("bread", "butter", "milk", "eggs", "juice");
+        } else if (lowerMsg.contains("salad") || lowerMsg.contains("fruit")) {
+            dishName = "Fresh Farm Fruit & Salad";
+            keywords = List.of("apple", "banana", "cucumber", "lemon");
+        } else {
+            dishName = "Grocery Staples";
+            keywords = List.of("atta", "rice", "dal", "oil");
+        }
+
+        List<ProductDto> dtos = findProductsForKeywords(keywords, 4);
+        BigDecimal total = dtos.stream()
+                .map(ProductDto::getEffectivePrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new RecipeBundleResult(dishName, dtos, total);
+    }
+
+    private List<ProductDto> findProductsForKeywords(List<String> keywords, int limit) {
+        List<Criteria> criteriaList = new ArrayList<>();
+        for (String kw : keywords) {
+            criteriaList.add(Criteria.where("name").regex(kw, "i"));
+            criteriaList.add(Criteria.where("description").regex(kw, "i"));
+            criteriaList.add(Criteria.where("category.name").regex(kw, "i"));
+        }
+        Query q = Query.query(Criteria.where("active").is(true).orOperator(criteriaList.toArray(new Criteria[0]))).limit(limit);
+        List<Product> products = mongoTemplate.find(q, Product.class);
+        if (products.isEmpty()) {
+            products = mongoTemplate.find(Query.query(Criteria.where("active").is(true)).limit(limit), Product.class);
+        }
+        return products.stream().map(productService::mapToDto).collect(Collectors.toList());
+    }
+
     private List<ProductDto> findProductsForQuery(String queryStr, int limit) {
         String lower = queryStr.toLowerCase();
         String[] words = lower.replaceAll("[^a-z0-9\\s]", "").split("\\s+");
@@ -300,23 +468,19 @@ public class AIService {
         return products.stream().map(productService::mapToDto).collect(Collectors.toList());
     }
 
-    // Helper: Generate heuristic chat reply
     private String generateHeuristicChatReply(String userMsg, List<ProductDto> candidates) {
         String lower = userMsg.toLowerCase();
         if (lower.contains("hello") || lower.contains("hi") || lower.contains("hey")) {
-            return "Welcome to ShopAI! I am your AI Shopping Assistant. How can I help you find fresh groceries or plan your meal today?";
+            return "Welcome to ShopAI! I am your AI Shopping Assistant. Ask me for fresh groceries, live order tracking, or custom recipe bundles!";
         }
         if (lower.contains("healthy") || lower.contains("keto") || lower.contains("diet")) {
             return "Here are top healthy, nutrient-rich options from our fresh grocery aisle:";
         }
         if (lower.contains("snack") || lower.contains("biscuit") || lower.contains("tea") || lower.contains("coffee")) {
-            return "Looking for delicious snack options? Here are some customer favorites for your pantry:";
+            return "Looking for delicious snack options? Here are top customer favorites for your pantry:";
         }
         if (lower.contains("milk") || lower.contains("dairy") || lower.contains("butter") || lower.contains("cheese")) {
             return "Check out our daily fresh dairy selection sourced directly from verified farms:";
-        }
-        if (lower.contains("delivery") || lower.contains("pickup") || lower.contains("slot")) {
-            return "We offer 1-Hour Express Store Pickup with reserved smart time slots, as well as FREE Home Delivery on orders over ₹500!";
         }
         if (!candidates.isEmpty()) {
             return String.format("Based on your query '%s', here are top recommended grocery products from ShopAI:", userMsg);
@@ -324,7 +488,6 @@ public class AIService {
         return "I found these top-rated fresh items for your kitchen. Feel free to ask me for healthy options, recipes, or budget-friendly picks!";
     }
 
-    // Helper: Call Gemini REST API
     private String callGeminiApi(String prompt) {
         String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey);
 
@@ -360,16 +523,17 @@ public class AIService {
         return null;
     }
 
-    private String buildChatPrompt(String userMsg, List<ProductDto> candidates) {
+    private String buildChatPrompt(String userMsg, List<ProductDto> candidates, String userEmail) {
         StringBuilder sb = new StringBuilder();
-        sb.append("You are ShopAI, a helpful AI shopping assistant for a grocery e-commerce store.\n");
+        sb.append("You are ShopAI, a friendly and highly efficient AI shopping assistant for a modern grocery e-commerce store.\n");
+        sb.append("User Email: ").append(userEmail.isEmpty() ? "Guest" : userEmail).append("\n");
         sb.append("User Question: ").append(userMsg).append("\n\n");
         sb.append("Available Catalog Context:\n");
         for (ProductDto p : candidates) {
             sb.append(String.format("- %s (Category: %s, Price: ₹%s/%s)\n",
                     p.getName(), p.getCategory() != null ? p.getCategory().getName() : "Grocery", p.getEffectivePrice(), p.getUnit()));
         }
-        sb.append("\nProvide a concise, friendly 2-sentence recommendation.");
+        sb.append("\nProvide a concise, helpful 2-sentence recommendation.");
         return sb.toString();
     }
 }

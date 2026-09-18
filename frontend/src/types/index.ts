@@ -242,6 +242,10 @@ export interface AiChatMessage {
   sender: 'user' | 'assistant';
   text: string;
   suggestedProducts?: Product[];
+  latestOrder?: Order;
+  quickActions?: string[];
+  intent?: string;
+  recipeTotalPrice?: number;
   timestamp: string;
 }
 
@@ -254,7 +258,11 @@ export interface AiChatRequest {
 export interface AiChatResponse {
   reply: string;
   suggestedProducts?: Product[];
-  mode: 'GEMINI_LLM' | 'HEURISTIC_FALLBACK';
+  mode: string;
+  latestOrder?: Order;
+  quickActions?: string[];
+  intent?: string;
+  recipeTotalPrice?: number;
 }
 
 export interface AiSearchRequest {
