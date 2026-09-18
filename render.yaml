@@ -1,13 +1,29 @@
 services:
-  # Mini D-Mart Spring Boot Backend API
+  # ShopAI Spring Boot Backend API
   - type: web
-    name: mini-dmart-backend
-    env: java
-    buildCommand: mvn clean package -DskipTests
-    startCommand: java -jar backend/target/mini-dmart-backend-1.0.0.jar
+    name: shopai-backend
+    env: docker
+    dockerfilePath: Dockerfile
     plan: free
     envVars:
       - key: PORT
         value: 8082
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
       - key: CORS_ALLOWED_ORIGINS
         value: "*"
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # ShopAI React Frontend SPA
+  - type: web
+    name: shopai-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
